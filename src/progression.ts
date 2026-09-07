@@ -55,10 +55,10 @@ function normalizeProfile(value: unknown): PlayerProfile {
     : []
 
   const selected = {
-    mouse: validIds.has(source.selected?.mouse ?? '') && characters.some(c => c.id === source.selected?.mouse && c.role === 'mouse')
+    mouse: validIds.has(source.selected?.mouse ?? '') && characters.some(c => c.id === source.selected?.mouse && c.role === 'mouse') && unlocked.includes(source.selected!.mouse!)
       ? source.selected!.mouse!
       : DEFAULT_PROFILE.selected.mouse,
-    cat: validIds.has(source.selected?.cat ?? '') && characters.some(c => c.id === source.selected?.cat && c.role === 'cat')
+    cat: validIds.has(source.selected?.cat ?? '') && characters.some(c => c.id === source.selected?.cat && c.role === 'cat') && unlocked.includes(source.selected!.cat!)
       ? source.selected!.cat!
       : DEFAULT_PROFILE.selected.cat,
   }
@@ -83,6 +83,12 @@ export function loadProfile(storage: Pick<Storage, 'getItem'> | undefined = type
 export function saveProfile(profile: PlayerProfile, storage: Pick<Storage, 'setItem'> | undefined = typeof localStorage === 'undefined' ? undefined : localStorage): void {
   if (!storage) return
   try { storage.setItem(PROFILE_KEY, JSON.stringify(normalizeProfile(profile))) } catch { /* persistence is optional */ }
+}
+
+export function resetProfile(storage: Pick<Storage, 'removeItem'> | undefined = typeof localStorage === 'undefined' ? undefined : localStorage): PlayerProfile {
+  const fresh = structuredClone(DEFAULT_PROFILE)
+  try { storage?.removeItem(PROFILE_KEY) } catch { /* persistence is optional */ }
+  return fresh
 }
 
 export function addCoins(profile: PlayerProfile, amount: number): PlayerProfile {
