@@ -12,6 +12,7 @@ export type Level = {
   riddles: Riddle[]
 }
 export type Riddle = { id: string; question: string; choices: string[]; answer: number; explanation: string }
+export type Direction = Point
 
 type Mode = 'escape' | 'hunt'
 
@@ -78,6 +79,69 @@ export function shortestPath(grid: string[], from: Point, to: Point, unlocked: S
   return []
 }
 export function neighbors(grid:string[],p:Point,unlocked:Set<string>) { return directions.map(d=>({row:p.row+d.row,col:p.col+d.col})).filter(n=>canEnter(grid,n,unlocked)) }
+
+export function directionFrom(from: Point, to: Point): Direction | null {
+  const direction = { row: to.row - from.row, col: to.col - from.col }
+  return Math.abs(direction.row) + Math.abs(direction.col) === 1 ? direction : null
+}
+
+export function hasLineOfSight(grid: string[], observer: Point, target: Point, facing: Direction | null, unlocked: Set<string>): boolean {
+  if (!facing || same(observer, target)) return false
+  const delta = { row: target.row - observer.row, col: target.col - observer.col }
+  if (delta.row * facing.col !== delta.col * facing.row) return false
+  if (Math.sign(delta.row) !== Math.sign(facing.row) || Math.sign(delta.col) !== Math.sign(facing.col)) return false
+  const distance = Math.abs(delta.row) + Math.abs(delta.col)
+  for (let step = 1; step < distance; step += 1) {
+    const point = { row: observer.row + facing.row * step, col: observer.col + facing.col * step }
+    if (!canEnter(grid, point, unlocked)) return false
+  }
+  return canEnter(grid, target, unlocked)
+}
+
+export function chooseMouseMove(
+  grid: string[],
+  mouse: Point,
+  cat: Point,
+  exit: Point,
+  unlocked: Set<string>,
+  facing: Direction | null,
+  previousMouse: Point | null,
+): Point | null {
+  const options = neighbors(grid, mouse, unlocked).filter(point => !same(point, cat))
+  if (!options.length) return null
+
+  const detected = hasLineOfSight(grid, mouse, cat, facing, unlocked)
+  const previousKey = previousMouse ? key(previousMouse) : null
+  const forwardPath = shortestPath(grid, mouse, exit, unlocked)
+  const pathStep = forwardPath.length > 1 ? forwardPath[1] : null
+
+  if (!detected && pathStep && options.some(option => same(option, pathStep))) {
+    const alternatives = options.filter(option => !same(option, previousMouse ?? mouse))
+    if (alternatives.some(option => same(option, pathStep)) || alternatives.length === 0) return pathStep
+  }
+
+  let best = options[0]
+  let bestScore = -Infinity
+  for (const option of options) {
+    const exitPath = shortestPath(grid, option, exit, unlocked)
+    const exitDistance = exitPath.length ? exitPath.length - 1 : 999
+    const catPath = shortestPath(grid, cat, option, unlocked)
+    const catDistance = catPath.length ? catPath.length - 1 : 999
+    const mobility = neighbors(grid, option, unlocked).filter(next => !same(next, cat)).length
+    const reversePenalty = previousKey === key(option) ? 14 : 0
+    const optionFacing = directionFrom(mouse, option)
+    const stillVisible = hasLineOfSight(grid, option, cat, optionFacing, unlocked)
+
+    if (!detected) {
+      const score = -exitDistance * 20 + mobility * 3 - reversePenalty * 3 - (stillVisible ? 8 : 0)
+      if (score > bestScore) { bestScore = score; best = option }
+    } else {
+      const score = catDistance * 16 - exitDistance * 2 + mobility * 4 - reversePenalty * 4 - (stillVisible ? 20 : 0)
+      if (score > bestScore) { bestScore = score; best = option }
+    }
+  }
+  return best
+}
 
 export function validateLevels(source = levels): string[] {
   const errors: string[] = []
