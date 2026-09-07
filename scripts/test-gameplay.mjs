@@ -84,9 +84,6 @@ function validateRoute(level, route, from, to, unlocked, label) {
   return null
 }
 
-// Searches the actual Escape turn model: a player may unlock an adjacent gate
-// without spending a turn, then each successful move advances the cat one BFS step.
-// This proves every level has at least one genuinely playable winning strategy.
 function canEscape(level) {
   const start = { mouse: level.mouseStart, cat: level.catStart, unlocked: new Set() }
   const queue = [start]
@@ -96,7 +93,6 @@ function canEscape(level) {
     const state = queue[i]
     const unlockedKey = [...state.unlocked].sort().join(',')
 
-    // Solving a riddle is free: attempting to enter an adjacent locked gate opens it.
     for (const gate of level.gates) {
       const gateKey = key(gate)
       if (state.unlocked.has(gateKey)) continue
@@ -122,6 +118,72 @@ function canEscape(level) {
       if (!seen.has(nextKey)) {
         seen.add(nextKey)
         queue.push({ mouse: nextMouse, cat: nextCat, unlocked: new Set(state.unlocked) })
+      }
+    }
+  }
+
+  return false
+}
+
+// Mirrors the Hunt mouse AI in App.tsx: after each successful cat move,
+// the mouse chooses the legal neighbor maximizing distance from the cat,
+// with a secondary preference for staying closer to the exit.
+function mouseTurn(level, currentCat, currentMouse, unlocked) {
+  const options = legalNeighbors(level, currentMouse, unlocked).filter(p => key(p) !== key(currentCat))
+  if (!options.length) return null
+
+  let best = options[0]
+  let bestScore = -Infinity
+  for (const option of options) {
+    const distance = shortestPath(level, currentCat, option, unlocked).length
+    const exitDistance = shortestPath(level, option, level.exit, unlocked).length
+    const score = distance * 4 - exitDistance
+    if (score > bestScore) {
+      bestScore = score
+      best = option
+    }
+  }
+  return best
+}
+
+// Searches the actual Hunt turn model. The cat may choose any legal move,
+// while the mouse response is deterministic according to the game's AI.
+// Reaching the mouse is an immediate win; reaching the exit is an immediate loss.
+function canHunt(level) {
+  const start = { cat: level.catStart, mouse: level.mouseStart, unlocked: new Set() }
+  const queue = [start]
+  const seen = new Set([`${key(start.cat)}|${key(start.mouse)}|`])
+
+  for (let i = 0; i < queue.length; i += 1) {
+    const state = queue[i]
+    const unlockedKey = [...state.unlocked].sort().join(',')
+
+    // Solving a riddle is free: attempting to enter an adjacent locked gate opens it.
+    for (const gate of level.gates) {
+      const gateKey = key(gate)
+      if (state.unlocked.has(gateKey)) continue
+      if (Math.abs(gate.row - state.cat.row) + Math.abs(gate.col - state.cat.col) !== 1) continue
+      const nextUnlocked = new Set(state.unlocked)
+      nextUnlocked.add(gateKey)
+      const nextKey = `${key(state.cat)}|${key(state.mouse)}|${[...nextUnlocked].sort().join(',')}`
+      if (!seen.has(nextKey)) {
+        seen.add(nextKey)
+        queue.push({ cat: state.cat, mouse: state.mouse, unlocked: nextUnlocked })
+      }
+    }
+
+    for (const nextCat of legalNeighbors(level, state.cat, state.unlocked)) {
+      if (key(nextCat) === key(state.mouse)) return true
+
+      const fleeing = mouseTurn(level, nextCat, state.mouse, state.unlocked)
+      if (!fleeing) return true
+      if (key(fleeing) === key(nextCat)) return true
+      if (key(fleeing) === key(level.exit)) continue
+
+      const nextKey = `${key(nextCat)}|${key(fleeing)}|${unlockedKey}`
+      if (!seen.has(nextKey)) {
+        seen.add(nextKey)
+        queue.push({ cat: nextCat, mouse: fleeing, unlocked: new Set(state.unlocked) })
       }
     }
   }
@@ -176,6 +238,7 @@ for (const level of levels) {
   }
 
   if (!canEscape(level)) failures.push(`Level ${level.id}: no winning Escape strategy survives the cat's BFS response`)
+  if (!canHunt(level)) failures.push(`Level ${level.id}: no winning Hunt strategy survives the mouse's evasive AI`)
 
   if (escapeRoute.length && level.gates.length) {
     const routeKeys = new Set(escapeRoute.map(key))
@@ -194,4 +257,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, route integrity, gates, opening moves, and Escape solvability are valid.`)
+console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, route integrity, gates, opening moves, Escape solvability, and Hunt solvability are valid.`)
