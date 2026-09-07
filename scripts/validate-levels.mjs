@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8')
-const levelBlocks = [...source.matchAll(/\{\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*\{\s*id:|\n\s*\},\n\]\n\nlet activeMode)/g)]
+const levelBlocks = [...source.matchAll(/\{\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*(?:\{|\]))/g)]
 const errors = []
 
 if (!levelBlocks.length) {
@@ -13,7 +13,7 @@ const ids = levelBlocks.map(match => Number(match[1]))
 if (new Set(ids).size !== ids.length) errors.push('Duplicate level id detected.')
 
 const parseGrid = (block, field) => {
-  const match = block.match(new RegExp(`${field}:\\s*\\[([\\s\\S]*?)\\]`))
+  const match = block.match(new RegExp(`${field}:\\s*\[([\\s\\S]*?)\]`))
   return match ? [...match[1].matchAll(/'([^']*)'/g)].map(item => item[1]) : null
 }
 
