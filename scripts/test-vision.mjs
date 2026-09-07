@@ -27,7 +27,7 @@ function hasLineOfSight(grid, observer, target) {
 
   while (true) {
     const point = { row: y0, col: x0 }
-    if (!key(point).includes(key(observer)) && !canEnter(grid, point)) return false
+    if (key(point) !== key(observer) && !canEnter(grid, point)) return false
     if (x0 === x1 && y0 === y1) return true
 
     const doubledError = 2 * error
@@ -65,7 +65,7 @@ blocked[3] = '#....#..#'
 if (hasLineOfSight(blocked, observer, { row: 3, col: 7 })) failures.push('A wall must block Hunt vision at any distance.')
 
 const blockedDiagonal = open.slice()
-blockedDiagonal[2] = '#.#.....#'
+blockedDiagonal[2] = '#..#....#'
 if (hasLineOfSight(blockedDiagonal, observer, { row: 1, col: 2 })) failures.push('A wall on a diagonal sight line must block Hunt vision.')
 
 console.log(failures.length ? failures.map(failure => `FAIL: ${failure}`).join('\n') : 'Hunt vision regression test passed: full 360-degree line of sight is long-range and wall-blocked.')
