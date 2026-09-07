@@ -36,10 +36,18 @@ Validate the level data:
 npm run validate:levels
 ```
 
+Run the gameplay, accessibility, and PWA smoke tests:
+
+```bash
+npm run test:gameplay
+npm run test:accessibility
+npm run test:pwa
+```
+
 Production build:
 
 ```bash
 npm run build
 ```
 
-The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs level validation before the production build.
+The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs the validation and smoke tests before the production build.
