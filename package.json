@@ -12,10 +12,11 @@
     "typecheck": "tsc --noEmit",
     "validate:levels": "node scripts/validate-levels.mjs",
     "test:gameplay": "node scripts/test-gameplay.mjs",
+    "test:progression": "node scripts/test-progression.mjs",
     "test:accessibility": "node scripts/test-accessibility.mjs",
     "test:pwa": "node scripts/test-pwa.mjs",
     "test:deployment": "node scripts/test-deployment.mjs",
-    "test:release": "npm run typecheck && npm run validate:levels && npm run test:gameplay && npm run test:accessibility && npm run test:pwa && npm run test:deployment && npm run build",
+    "test:release": "npm run typecheck && npm run validate:levels && npm run test:gameplay && npm run test:progression && npm run test:accessibility && npm run test:pwa && npm run test:deployment && npm run build",
     "preview": "vite preview"
   },
   "devDependencies": {
