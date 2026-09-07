@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8')
-const levelBlocks = [...source.matchAll(/\{\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},?\n\s*\{\s*id:|\n\s*\],\n\nlet activeMode)/g)]
+const levelBlocks = [...source.matchAll(/\{\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*\{\s*id:|\n\s*\},\n\]\n\nlet activeMode)/g)]
 const errors = []
 
 if (!levelBlocks.length) {
