@@ -43,7 +43,10 @@ for (const required of [
 }
 
 if (!ads.includes('panel.hidden = !menu')) failures.push('Rewarded ads must be hidden outside the main menu')
-if (!ads.includes('setButton(true, `LOADING REWARDED AD…`)')) failures.push('Rewarded ad button must enter a loading state before an ad request')
+if (!ads.includes('setButton(true') || !ads.includes('LOADING REWARDED AD')) failures.push('Rewarded ad button must enter a loading state before an ad request')
+const loadingIndex = ads.indexOf('setButton(true')
+const requestIndex = ads.indexOf('window.adBreak({')
+if (loadingIndex === -1 || requestIndex === -1 || loadingIndex > requestIndex) failures.push('Rewarded ad loading state must be set before calling the ad placement API')
 if (!ads.includes('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js')) failures.push('Rewarded ad loader must use the official Google AdSense H5 Games script')
 
 if (failures.length) {
@@ -51,4 +54,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Rewarded ads smoke test passed: opt-in UI, configurable H5 Games Ads loader, completion-only +15 coin reward, dismissal handling, and menu-only placement are present.')
+console.log('Rewarded ads smoke test passed: opt-in UI, configurable H5 Games Ads loader, completion-only +15 coin reward, dismissal handling, loading-state ordering, and menu-only placement are present.')
