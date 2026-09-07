@@ -66,10 +66,10 @@ function legalNeighbors(level, point, unlocked) {
     .filter(next => level.grid[next.row][next.col] !== 'G' || unlocked.has(key(next)))
 }
 
-function validateRoute(level, route, unlocked, label) {
+function validateRoute(level, route, from, to, unlocked, label) {
   if (!route.length) return `${label} returned no route`
-  if (key(route[0]) !== key(route.from)) return `${label} has the wrong starting tile`
-  if (key(route[route.length - 1]) !== key(route.to)) return `${label} has the wrong destination tile`
+  if (key(route[0]) !== key(from)) return `${label} has the wrong starting tile`
+  if (key(route[route.length - 1]) !== key(to)) return `${label} has the wrong destination tile`
   for (let i = 0; i < route.length; i += 1) {
     const point = route[i]
     if (!inside(level, point)) return `${label} leaves the grid at ${key(point)}`
@@ -100,21 +100,21 @@ for (const level of levels) {
   }
   if (key(level.mouseStart) === key(level.catStart)) failures.push(`Level ${level.id}: mouse and cat share a start tile`)
 
+  const lockedEscapeRoute = shortestPath(level, level.mouseStart, level.exit, locked)
   const escapeRoute = shortestPath(level, level.mouseStart, level.exit, allUnlocked)
   if (!escapeRoute.length) failures.push(`Level ${level.id}: mouse cannot reach exit with gates unlocked`)
   else {
-    escapeRoute.from = level.mouseStart
-    escapeRoute.to = level.exit
-    const routeError = validateRoute(level, escapeRoute, allUnlocked, `Level ${level.id} escape route`)
+    const routeError = validateRoute(level, escapeRoute, level.mouseStart, level.exit, allUnlocked, `Level ${level.id} escape route`)
     if (routeError) failures.push(routeError)
   }
+
+  if (level.id < 3 && !lockedEscapeRoute.length) failures.push(`Level ${level.id}: escape route is unexpectedly dependent on a gate`)
+  if (level.id === 3 && lockedEscapeRoute.length) failures.push('Level 3: escape route is unexpectedly possible with all gates locked')
 
   const hunterRoute = shortestPath(level, level.catStart, level.mouseStart, allUnlocked)
   if (!hunterRoute.length) failures.push(`Level ${level.id}: cat cannot reach mouse with gates unlocked`)
   else {
-    hunterRoute.from = level.catStart
-    hunterRoute.to = level.mouseStart
-    const routeError = validateRoute(level, hunterRoute, allUnlocked, `Level ${level.id} hunter route`)
+    const routeError = validateRoute(level, hunterRoute, level.catStart, level.mouseStart, allUnlocked, `Level ${level.id} hunter route`)
     if (routeError) failures.push(routeError)
   }
 
