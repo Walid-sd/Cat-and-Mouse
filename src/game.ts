@@ -68,3 +68,25 @@ export function shortestPath(grid: string[], from: Point, to: Point, unlocked: S
   return []
 }
 export function neighbors(grid:string[],p:Point,unlocked:Set<string>) { return directions.map(d=>({row:p.row+d.row,col:p.col+d.col})).filter(n=>canEnter(grid,n,unlocked)) }
+
+export function validateLevels(source = levels): string[] {
+  const errors: string[] = []
+  source.forEach(level => {
+    const width = level.grid[0]?.length ?? 0
+    if (!level.grid.length || !width) { errors.push(`Level ${level.id}: empty grid`); return }
+    if (level.grid.some(row => row.length !== width)) errors.push(`Level ${level.id}: inconsistent row width`)
+    const points = [level.mouseStart, level.catStart, level.exit]
+    if (points.some(p => !inBounds(level.grid, p))) errors.push(`Level ${level.id}: start or exit is out of bounds`)
+    if (level.gates.length !== level.riddles.length) errors.push(`Level ${level.id}: gate/riddle count mismatch`)
+    for (const gate of level.gates) {
+      if (!inBounds(level.grid, gate) || level.grid[gate.row][gate.col] !== 'G') errors.push(`Level ${level.id}: gate ${key(gate)} is not marked G`)
+    }
+    if (level.grid[level.mouseStart.row]?.[level.mouseStart.col] !== 'M') errors.push(`Level ${level.id}: mouseStart is not M`)
+    if (level.grid[level.catStart.row]?.[level.catStart.col] !== 'C') errors.push(`Level ${level.id}: catStart is not C`)
+    if (level.grid[level.exit.row]?.[level.exit.col] !== 'E') errors.push(`Level ${level.id}: exit is not E`)
+    if (same(level.mouseStart, level.catStart)) errors.push(`Level ${level.id}: mouse and cat share a start tile`)
+    const allUnlocked = new Set(level.gates.map(key))
+    if (shortestPath(level.grid, level.mouseStart, level.exit, allUnlocked).length === 0) errors.push(`Level ${level.id}: exit is unreachable with gates open`)
+  })
+  return errors
+}
