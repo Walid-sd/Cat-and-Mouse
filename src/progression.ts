@@ -131,10 +131,18 @@ export function coinSpawns(grid: string[], seed: number, reserved: Point[]): Poi
   const chosen: Point[] = []
   let cursor = Math.abs(seed * 17 + 11) % candidates.length
   const targetCount = Math.min(8, Math.max(4, Math.floor(candidates.length / 18)))
-  while (chosen.length < targetCount && chosen.length < candidates.length) {
+  let attempts = 0
+  while (chosen.length < targetCount && attempts < candidates.length) {
     const point = candidates[cursor]
     if (!chosen.some(existing => existing.row === point.row && existing.col === point.col)) chosen.push(point)
     cursor = (cursor + 7 + seed) % candidates.length
+    attempts += 1
+  }
+  if (chosen.length < targetCount) {
+    for (const point of candidates) {
+      if (chosen.length >= targetCount) break
+      if (!chosen.some(existing => existing.row === point.row && existing.col === point.col)) chosen.push(point)
+    }
   }
   return chosen
 }
