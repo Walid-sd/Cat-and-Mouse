@@ -36,6 +36,8 @@ if (!progression.includes('unlocked.includes(source.selected!.mouse!)') || !prog
 if (!progression.includes('try { storage?.removeItem(PROFILE_KEY) } catch')) failures.push('Profile reset must remove the persisted profile safely.')
 if (!progression.includes('const previousCompleted = profile.completed[mode]')) failures.push('Level completion must never reduce progression or farm repeat-completion rewards.')
 if (!progression.includes('return addCoins({ ...profile, completed: { ...profile.completed, [mode]: completed } }, LEVEL_COMPLETION_BONUS)')) failures.push('First-time level completion must award the configured coin bonus.')
+if (!progression.includes('let attempts = 0') || !progression.includes('attempts < candidates.length') || !progression.includes('attempts += 1')) failures.push('Coin spawning must have a bounded selection loop.')
+if (!progression.includes('if (chosen.length < targetCount)')) failures.push('Coin spawning must have a deterministic fallback when the stride cycles early.')
 
 for (const required of [
   'Character selection and shop',
@@ -60,4 +62,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, safe selection normalization, profile reset, one-time maze coin collection, level completion, deterministic coin spawning, and character shop UI are defined.')
+console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, safe selection normalization, profile reset, one-time maze coin collection, level completion, bounded deterministic coin spawning, and character shop UI are defined.')
