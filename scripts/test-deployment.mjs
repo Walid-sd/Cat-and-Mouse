@@ -20,7 +20,7 @@ for (const required of [
   'Referrer-Policy: strict-origin-when-cross-origin',
   'Permissions-Policy: camera=(), microphone=(), geolocation=()',
   'X-Frame-Options: DENY',
-  "Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; media-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self'",
+  "Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; media-src 'self'; script-src 'self' https://pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; worker-src 'self'",
 ]) {
   if (!headers.includes(required)) failures.push(`Security headers are missing: ${required}`)
 }
@@ -49,4 +49,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, CSP, crawler policy, cache freshness controls, and stale-chunk recovery are present.')
+console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, CSP, crawler policy, cache freshness controls, stale-chunk recovery, and rewarded-ad resource access are present.')
