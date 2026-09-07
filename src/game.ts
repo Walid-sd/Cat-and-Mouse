@@ -85,35 +85,26 @@ export function directionFrom(from: Point, to: Point): Direction | null {
   return Math.abs(direction.row) + Math.abs(direction.col) === 1 ? direction : null
 }
 
-export function hasLineOfSight(grid: string[], observer: Point, target: Point, facing: Direction | null, unlocked: Set<string>): boolean {
-  if (!facing || same(observer, target)) return false
+export function hasLineOfSight(grid: string[], observer: Point, target: Point, _facing: Direction | null, unlocked: Set<string>): boolean {
+  if (same(observer, target)) return false
 
   const delta = { row: target.row - observer.row, col: target.col - observer.col }
-  const forwardDistance = delta.row * facing.row + delta.col * facing.col
-  const sidewaysDistance = Math.abs(delta.row * facing.col - delta.col * facing.row)
+  const sameRow = delta.row === 0
+  const sameColumn = delta.col === 0
+  // Hunt vision is omnidirectional: the mouse can see equally far forward,
+  // backward, left, or right. It does not need to be facing the cat.
+  if (!sameRow && !sameColumn) return false
 
-  // Vision is an unlimited-range 90° forward cone. The old check only accepted
-  // targets on the exact facing row/column, which made valid targets disappear
-  // from the AI's vision as soon as they were a few cells away diagonally.
-  if (forwardDistance <= 0 || sidewaysDistance > forwardDistance) return false
-
-  // Trace the actual grid line so walls block vision at every distance.
-  let row = observer.row
-  let col = observer.col
-  const targetRow = target.row
-  const targetCol = target.col
-  const absRow = Math.abs(targetRow - row)
-  const absCol = Math.abs(targetCol - col)
-  const stepRow = row < targetRow ? 1 : -1
-  const stepCol = col < targetCol ? 1 : -1
-  let error = absRow - absCol
-
-  while (row !== targetRow || col !== targetCol) {
-    const doubleError = error * 2
-    if (doubleError > -absCol) { error -= absCol; row += stepRow }
-    if (doubleError < absRow) { error += absRow; col += stepCol }
-    const point = { row, col }
-    if (same(point, target)) break
+  const distance = Math.abs(delta.row) + Math.abs(delta.col)
+  const step = {
+    row: Math.sign(delta.row),
+    col: Math.sign(delta.col),
+  }
+  for (let currentDistance = 1; currentDistance < distance; currentDistance += 1) {
+    const point = {
+      row: observer.row + step.row * currentDistance,
+      col: observer.col + step.col * currentDistance,
+    }
     if (!canEnter(grid, point, unlocked)) return false
   }
 
