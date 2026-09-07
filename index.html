@@ -12,9 +12,30 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <title>Cat & Mouse — The Escape</title>
+    <style>
+      #install-app {
+        position: fixed;
+        z-index: 9999;
+        top: max(12px, env(safe-area-inset-top));
+        right: max(12px, env(safe-area-inset-right));
+        border: 1px solid #4b4b4b;
+        border-radius: 10px;
+        padding: 9px 12px;
+        background: #171717;
+        color: #f5f2ea;
+        font: 800 11px/1 system-ui, sans-serif;
+        letter-spacing: .08em;
+        cursor: pointer;
+        box-shadow: 0 5px 18px #0008;
+      }
+      #install-app:hover { background: #242424; }
+      #install-app:focus-visible { outline: 2px solid #f5f2ea; outline-offset: 2px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <button id="install-app" type="button" hidden aria-label="Install Cat and Mouse as an app">INSTALL APP</button>
+    <script src="/install.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
