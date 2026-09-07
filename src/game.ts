@@ -18,7 +18,7 @@ export const levels: Level[] = [
   {
     id: 1, name: 'The First Escape', subtitle: 'Every step gives the hunter a step.',
     grid: ['###############','#M....#.......#','#.###.#.#####.#','#...#...#.....#','###.#####.###.#','#...G...#...#.#','#.#####.#.#.#.#','#.#.....#.#...#','#.#.#########.#','#...#.........#','###.#.#########','#...#.........#','#.###.#########','#.....C......E#','###############'],
-    mouseStart:{row:1,col:1}, catStart:{row:13,col:6}, exit:{row:13,col:14}, gates:[{row:5,col:4}],
+    mouseStart:{row:1,col:1}, catStart:{row:13,col:6}, exit:{row:13,col:13}, gates:[{row:5,col:4}],
     riddles:[riddle('gate-1','I have keys but no locks. I have space but no room. You can enter, but you cannot go outside. What am I?',['A keyboard','A house','A map','A piano'],0,'A keyboard has keys, a space bar, and an Enter key.')],
   },
   {
@@ -40,7 +40,7 @@ export const levels: Level[] = [
 
 export function key(p: Point) { return `${p.row}:${p.col}` }
 export function same(a: Point, b: Point) { return a.row === b.row && a.col === b.col }
-export function inBounds(grid: string[], p: Point) { return p.row >= 0 && p.row < grid.length && p.col >= 0 && p.col < grid[0].length }
+export function inBounds(grid: string[], p: Point) { return grid.length > 0 && grid[0].length > 0 && p.row >= 0 && p.row < grid.length && p.col >= 0 && p.col < grid[0].length }
 const directions: Point[] = [{row:-1,col:0},{row:0,col:1},{row:1,col:0},{row:0,col:-1}]
 export function canEnter(grid: string[], p: Point, unlocked: Set<string>) {
   if (!inBounds(grid,p)) return false
