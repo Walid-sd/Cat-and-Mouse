@@ -21,7 +21,7 @@ const requiredPatterns = [
   ['Result actions receive initial focus', /resultFirstAction\.current\?\.focus\(\)/],
   ['Modal focus is trapped with Tab', /event\.key !== 'Tab'[\s\S]*?modalRef\.current[\s\S]*?event\.shiftKey/],
   ['Modal ref is attached to rendered dialogs', /ref=\{modalRef\}/],
-  ['Escape closes result screens', /if \(gameOver \| victory\)[\s\S]*?event\.key === 'Escape'/],
+  ['Escape closes result screens', /if \(gameOver \|\| victory\)[\s\S]*?event\.key === 'Escape'/],
 ]
 
 for (const [label, pattern] of requiredPatterns) {
