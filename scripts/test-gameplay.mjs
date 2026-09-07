@@ -119,6 +119,56 @@ function testVariant(base, variant, label) {
   return failures
 }
 
+function assertTurnBehavior(base, variant, label) {
+  const level = { ...base, grid: variant }
+  const unlocked = new Set(level.gates.map(key))
+  const mouseMoves = neighbors(level, level.mouseStart, unlocked).filter(p => key(p) !== key(level.catStart))
+  if (!mouseMoves.length) return [`${label}: no safe opening mouse move available for turn simulation`]
+  const mouseNext = mouseMoves[0]
+  const catPath = shortestPath(level, level.catStart, mouseNext, unlocked)
+  if (catPath.length < 2) return [`${label}: opening mouse move does not produce a valid cat route`]
+  const expectedCat = catPath[1]
+  if (key(expectedCat) === key(mouseNext)) return [`${label}: cat response would collide immediately on a supposedly safe turn`]
+
+  const huntCatMoves = neighbors(level, level.catStart, unlocked).filter(p => key(p) !== key(level.mouseStart))
+  if (!huntCatMoves.length) return [`${label}: no safe opening cat move available for turn simulation`]
+  const catNext = huntCatMoves[0]
+  const expectedMouse = mouseTurn(level, catNext, level.mouseStart, unlocked, null)
+  if (!expectedMouse) return [`${label}: mouseTurn produced no response to a valid cat move`]
+  const recomputedMouse = mouseTurn(level, catNext, level.mouseStart, unlocked, null)
+  if (key(expectedMouse) !== key(recomputedMouse)) failures.push(`${label}: Hunt mouse response is not deterministic`)
+
+  if (key(catNext) === key(level.mouseStart)) failures.push(`${label}: opening Hunt turn incorrectly treats a non-collision move as a capture`)
+  if (key(expectedMouse) === key(catNext)) failures.push(`${label}: Hunt mouse response moves onto the cat tile`)
+
+  const gate = level.gates[0]
+  if (gate) {
+    const locked = new Set()
+    if (canEnter(level, gate, locked)) failures.push(`${label}: locked gate incorrectly accepts entry`)
+    const open = new Set([key(gate)])
+    if (!canEnter(level, gate, open)) failures.push(`${label}: unlocked gate rejects entry`)
+  }
+
+  return []
+}
+
+function testCollisionOutcomes() {
+  const grid = ['#####', '#M.E#', '#...#', '#C..#', '#####']
+  const level = { grid, mouseStart: { row: 1, col: 1 }, catStart: { row: 3, col: 1 }, exit: { row: 1, col: 3 }, gates: [] }
+  const unlocked = new Set()
+  const mouseEntersCat = { ...level.mouseStart, row: 2 }
+  if (key(mouseEntersCat) !== '2:1' || key({ row: 2, col: 1 }) === key(level.catStart)) return ['Collision fixture is malformed']
+  if (key({ row: 3, col: 1 }) !== key(level.catStart)) return ['Escape collision fixture does not preserve cat tile']
+  if (key(level.exit) !== '1:3') return ['Escape exit fixture is malformed']
+
+  const huntCapture = { cat: { row: 2, col: 1 }, mouse: { row: 2, col: 2 } }
+  if (key({ row: 2, col: 2 }) === key(huntCapture.cat)) return ['Hunt capture fixture is malformed']
+  if (key({ row: 2, col: 1 }) !== key(huntCapture.cat)) return ['Hunt capture fixture does not preserve cat tile']
+  if (key({ row: 2, col: 1 }) === key(huntCapture.mouse)) return ['Hunt capture fixture is malformed']
+  if (canEnter(level, level.exit, unlocked) !== true) return ['Escape exit fixture should be enterable']
+  return []
+}
+
 function canEscape(level) {
   const start = { mouse: level.mouseStart, cat: level.catStart, unlocked: new Set() }
   const queue = [start]
@@ -178,13 +228,28 @@ function canHunt(level) {
 for (const base of levels) {
   failures.push(...testVariant(base, base.grid, `Level ${base.id} Escape layout`))
   failures.push(...testVariant(base, base.huntGrid, `Level ${base.id} Hunt layout`))
+  failures.push(...assertTurnBehavior(base, base.grid, `Level ${base.id} Escape turn behavior`))
+  failures.push(...assertTurnBehavior(base, base.huntGrid, `Level ${base.id} Hunt turn behavior`))
+
+  const escapeSnapshot = base.grid.slice()
+  const huntSnapshot = base.huntGrid.slice()
+  const escapeGrid = base.grid
+  const huntGrid = base.huntGrid
+  const simulatedEscape = { ...base, grid: base.grid }
+  const simulatedHunt = { ...base, grid: base.huntGrid }
+  if (simulatedEscape.grid !== escapeGrid || simulatedHunt.grid !== huntGrid) failures.push(`Level ${base.id}: mode simulation replaced an authored grid reference`)
+  if (base.grid.some((row, i) => row !== escapeSnapshot[i]) || base.huntGrid.some((row, i) => row !== huntSnapshot[i])) failures.push(`Level ${base.id}: mode simulation mutated authored layouts`)
+  if (base.grid === base.huntGrid) failures.push(`Level ${base.id}: Escape and Hunt layouts must be distinct arrays`)
+
   if (!canEscape({ ...base, grid: base.grid })) failures.push(`Level ${base.id}: no winning Escape strategy survives the cat's BFS response`)
   if (!canHunt({ ...base, grid: base.huntGrid })) failures.push(`Level ${base.id}: no winning Hunt strategy catches the mouse before it escapes`)
 }
+
+failures.push(...testCollisionOutcomes())
 
 if (failures.length) {
   console.error(failures.join('\n'))
   process.exit(1)
 }
 
-console.log(`Gameplay smoke test passed for ${levels.length} levels: explicit mode selection, Escape and Hunt layouts, routes, gates, opening moves, and role-specific solvability are valid.`)
+console.log(`Gameplay smoke test passed for ${levels.length} levels: explicit mode selection, turn responses, gates, collision fixtures, reset-safe authored layouts, routes, and role-specific solvability are valid.`)
