@@ -8,6 +8,7 @@ const requiredPatterns = [
   ['Result dialog is modal', /role="dialog" aria-modal="true" aria-labelledby="result-title"/],
   ['Victory dialog is modal', /role="dialog" aria-modal="true" aria-labelledby="victory-title"/],
   ['Riddle error is announced', /riddleError && <p className="error" role="alert">/],
+  ['Status changes are announced', /className=\{`status-card[^`]*`} role=\{danger && !thinking \? 'alert' : undefined\} aria-live="polite" aria-atomic="true"/],
   ['Sound control exposes pressed state', /className="sound-toggle" onClick=\{toggleSound\} aria-pressed=\{!muted\}/],
   ['Movement controls have a group label', /className="controls" aria-label="Movement controls"/],
   ['Up control has an accessible label', /aria-label="Move up"/],
@@ -18,6 +19,7 @@ const requiredPatterns = [
   ['Locked levels expose their state', /aria-label=\{`Level \$\{l\.id\}\$\{i > progress\[mode\] \? ', locked' : ''\}`\}/],
   ['Riddle answers receive initial focus', /riddleFirstAnswer\.current\?\.focus\(\)/],
   ['Result actions receive initial focus', /resultFirstAction\.current\?\.focus\(\)/],
+  ['Modal focus is trapped with Tab', /event\.key !== 'Tab'[\s\S]*?modalRef\.current[\s\S]*?event\.shiftKey/],
   ['Escape closes result screens', /if \(gameOver \|\| victory\)[\s\S]*?event\.key === 'Escape'/],
 ]
 
