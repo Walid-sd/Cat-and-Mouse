@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8')
-const blocks = [...source.matchAll(/\{\n\s*id:\s*(\d+),[\s\S]*?\n\s*\},(?=\n\s*\{\n\s*id:|\n\s*\],\n\nexport function key)/g)]
+const blocks = [...source.matchAll(/\{\n\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*\{\n\s*id:|\n\s*\},\n\]\n\nlet activeMode)/g)]
 
 if (!blocks.length) {
   console.error('Could not locate level definitions.')
@@ -9,7 +9,7 @@ if (!blocks.length) {
 }
 
 function parseRows(block, property) {
-  const match = block.match(new RegExp(`${property}:\\s*\\[([\\s\\S]*?)\\],\\n\\s*(?:huntGrid|mouseStart|catStart)`))
+  const match = block.match(new RegExp(`${property}:\\s*\\[([\\s\\S]*?)\\]`))
   if (!match) throw new Error(`Missing ${property}`)
   return [...match[1].matchAll(/'([^']*)'/g)].map(m => m[1])
 }
@@ -206,9 +206,8 @@ const failures = []
 for (const base of levels) {
   failures.push(...testVariant(base, base.grid, `Level ${base.id} Escape layout`))
   failures.push(...testVariant(base, base.huntGrid, `Level ${base.id} Hunt layout`))
-  const hunt = { ...base, grid: base.huntGrid }
   if (!canEscape({ ...base, grid: base.grid })) failures.push(`Level ${base.id}: no winning Escape strategy survives the cat's BFS response`)
-  if (!canHunt(hunt)) failures.push(`Level ${base.id}: no winning Hunt strategy catches the mouse before it escapes`)
+  if (!canHunt({ ...base, grid: base.huntGrid })) failures.push(`Level ${base.id}: no winning Hunt strategy catches the mouse before it escapes`)
 }
 
 if (failures.length) {
