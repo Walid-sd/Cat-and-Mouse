@@ -10,6 +10,7 @@ for (const required of [
   "id: 'cat-classic'",
   'export function loadProfile',
   'export function saveProfile',
+  'export function resetProfile',
   'export function addCoins',
   'export function selectCharacter',
   'export function unlockCharacter',
@@ -31,6 +32,8 @@ if (!progression.includes('coins: profile.coins - character.cost')) failures.pus
 if (!progression.includes('collectedCoins: []')) failures.push('Profiles must initialize persistent collected coin IDs.')
 if (!progression.includes('if (!coinId || profile.collectedCoins.includes(coinId)) return profile')) failures.push('Coin collection must reject already-collected IDs.')
 if (!progression.includes('return { ...addCoins(profile, COIN_VALUE), collectedCoins: [...profile.collectedCoins, coinId] }')) failures.push('Collecting a new coin must persist its ID and award its configured value.')
+if (!progression.includes('unlocked.includes(source.selected!.mouse!)') || !progression.includes('unlocked.includes(source.selected!.cat!)')) failures.push('Persisted selections must fall back when a stored character is locked.')
+if (!progression.includes('try { storage?.removeItem(PROFILE_KEY) } catch')) failures.push('Profile reset must remove the persisted profile safely.')
 if (!progression.includes('const previousCompleted = profile.completed[mode]')) failures.push('Level completion must never reduce progression or farm repeat-completion rewards.')
 if (!progression.includes('return addCoins({ ...profile, completed: { ...profile.completed, [mode]: completed } }, LEVEL_COMPLETION_BONUS)')) failures.push('First-time level completion must award the configured coin bonus.')
 
@@ -57,4 +60,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, one-time maze coin collection, level completion, deterministic coin spawning, and character shop UI are defined.')
+console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, safe selection normalization, profile reset, one-time maze coin collection, level completion, deterministic coin spawning, and character shop UI are defined.')
