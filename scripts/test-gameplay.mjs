@@ -1,7 +1,16 @@
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8')
-const blocks = [...source.matchAll(/\{\n\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*\{\n\s*id:|\n\s*\},\n\]\n\nlet activeMode)/g)]
+if (source.includes('activeMode') || source.includes('setActiveMode')) {
+  console.error('Gameplay engine must not use global active mode state.')
+  process.exit(1)
+}
+if (!source.includes('export function gridForMode')) {
+  console.error('Gameplay engine must expose explicit gridForMode mode selection.')
+  process.exit(1)
+}
+
+const blocks = [...source.matchAll(/\{\n\s*id:\s*(\d+),[\s\S]*?(?=\n\s*\},\n\s*\{\n\s*id:|\n\s*\},\n\]\n\nexport function gridForMode)/g)]
 
 if (!blocks.length) {
   console.error('Could not locate level definitions.')
@@ -9,7 +18,7 @@ if (!blocks.length) {
 }
 
 function parseRows(block, property) {
-  const match = block.match(new RegExp(`${property}:\\s*\\[([\\s\\S]*?)\\]`))
+  const match = block.match(new RegExp(`${property}:\\s*\[([\\s\\S]*?)\\]`))
   if (!match) throw new Error(`Missing ${property}`)
   return [...match[1].matchAll(/'([^']*)'/g)].map(m => m[1])
 }
