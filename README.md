@@ -23,7 +23,7 @@ Progress is stored locally in the browser for each mode. No account or server is
 
 The menu includes an optional **Watch an Ad · +15 🪙** reward. The reward is granted only from the H5 Games Ads `adViewed` completion callback; dismissing or unavailable ads award nothing. The ad panel is hidden during gameplay so ads never interrupt active turns.
 
-The integration is deliberately disabled until an approved H5 Games Ads Publisher ID is supplied in `public/ads-config.js`. Keep `testMode: true` while testing the placement. Once the H5 Games Ads account/site is approved, set the real Publisher ID and switch test mode off. Google requires H5 Games Ads access to be approved and recommends the standard Ad Placement API for rewarded placements. urlH5 Games Ads setuphttps://support.google.com/adsense/answer/9959170?hl=en
+The integration is deliberately disabled until an approved H5 Games Ads Publisher ID is supplied in `public/ads-config.js`. Keep `testMode: true` while testing the placement. Once the H5 Games Ads account/site is approved, set the real Publisher ID and switch test mode off. Google requires H5 Games Ads access to be approved and recommends the standard Ad Placement API for rewarded placements.
 
 ## Offline / installation
 
