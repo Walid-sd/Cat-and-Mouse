@@ -18,4 +18,5 @@ jobs:
       - run: npm run validate:levels
       - run: npm run test:gameplay
       - run: npm run test:accessibility
+      - run: npm run test:pwa
       - run: npm run build
