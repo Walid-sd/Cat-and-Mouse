@@ -84,6 +84,39 @@ function validateRoute(level, route, from, to, unlocked, label) {
   return null
 }
 
+function mouseTurn(level, currentCat, currentMouse, unlocked, lastMouse) {
+  const options = legalNeighbors(level, currentMouse, unlocked).filter(p => key(p) !== key(currentCat))
+  if (!options.length) return null
+
+  const catOptions = legalNeighbors(level, currentCat, unlocked).filter(p => key(p) !== key(currentMouse))
+  const previousKey = lastMouse ? key(lastMouse) : null
+
+  let best = options[0]
+  let bestScore = -Infinity
+  for (const option of options) {
+    const distance = shortestPath(level, currentCat, option, unlocked).length
+    const exitPath = shortestPath(level, option, level.exit, unlocked)
+    const exitDistance = exitPath.length ? exitPath.length - 1 : 999
+    const mobility = legalNeighbors(level, option, unlocked).filter(p => key(p) !== key(currentCat)).length
+    const reversePenalty = previousKey === key(option) ? 7 : 0
+
+    let worstCaseDistance = distance ? distance - 1 : 999
+    if (catOptions.length) {
+      worstCaseDistance = Math.min(...catOptions.map(catOption => {
+        const path = shortestPath(level, catOption, option, unlocked)
+        return path.length ? path.length - 1 : 999
+      }))
+    }
+
+    const score = distance * 8 + worstCaseDistance * 5 - exitDistance * 2 + mobility * 2 - reversePenalty
+    if (score > bestScore) {
+      bestScore = score
+      best = option
+    }
+  }
+  return best
+}
+
 // Searches the actual Escape turn model: a player may unlock an adjacent gate
 // without spending a turn, then each successful move advances the cat one BFS step.
 // This proves every level has at least one genuinely playable winning strategy.
@@ -130,32 +163,15 @@ function canEscape(level) {
 
 // Mirrors App.tsx's deterministic Hunt mouse AI exactly. The solver asks whether
 // at least one cat move can eventually force a catch against that fixed response.
-function mouseTurn(level, currentCat, currentMouse, unlocked) {
-  const options = legalNeighbors(level, currentMouse, unlocked).filter(p => key(p) !== key(currentCat))
-  if (!options.length) return null
-
-  let best = options[0]
-  let bestScore = -Infinity
-  for (const option of options) {
-    const distance = shortestPath(level, currentCat, option, unlocked).length
-    const exitDistance = shortestPath(level, option, level.exit, unlocked).length
-    const score = distance * 4 - exitDistance
-    if (score > bestScore) {
-      bestScore = score
-      best = option
-    }
-  }
-  return best
-}
-
 function canHunt(level) {
-  const start = { cat: level.catStart, mouse: level.mouseStart, unlocked: new Set() }
+  const start = { cat: level.catStart, mouse: level.mouseStart, lastMouse: null, unlocked: new Set() }
   const queue = [start]
-  const seen = new Set([`${key(start.cat)}|${key(start.mouse)}|`])
+  const seen = new Set([`${key(start.cat)}|${key(start.mouse)}||`])
 
   for (let i = 0; i < queue.length; i += 1) {
     const state = queue[i]
     const unlockedKey = [...state.unlocked].sort().join(',')
+    const lastMouseKey = state.lastMouse ? key(state.lastMouse) : ''
 
     for (const gate of level.gates) {
       const gateKey = key(gate)
@@ -163,25 +179,25 @@ function canHunt(level) {
       if (Math.abs(gate.row - state.cat.row) + Math.abs(gate.col - state.cat.col) !== 1) continue
       const nextUnlocked = new Set(state.unlocked)
       nextUnlocked.add(gateKey)
-      const nextKey = `${key(state.cat)}|${key(state.mouse)}|${[...nextUnlocked].sort().join(',')}`
+      const nextKey = `${key(state.cat)}|${key(state.mouse)}|${lastMouseKey}|${[...nextUnlocked].sort().join(',')}`
       if (!seen.has(nextKey)) {
         seen.add(nextKey)
-        queue.push({ cat: state.cat, mouse: state.mouse, unlocked: nextUnlocked })
+        queue.push({ cat: state.cat, mouse: state.mouse, lastMouse: state.lastMouse, unlocked: nextUnlocked })
       }
     }
 
     for (const nextCat of legalNeighbors(level, state.cat, state.unlocked)) {
       if (key(nextCat) === key(state.mouse)) return true
 
-      const fleeing = mouseTurn(level, nextCat, state.mouse, state.unlocked)
+      const fleeing = mouseTurn(level, nextCat, state.mouse, state.unlocked, state.lastMouse)
       if (!fleeing) return true
       if (key(fleeing) === key(nextCat)) return true
       if (key(fleeing) === key(level.exit)) continue
 
-      const nextKey = `${key(nextCat)}|${key(fleeing)}|${unlockedKey}`
+      const nextKey = `${key(nextCat)}|${key(fleeing)}|${key(state.mouse)}|${unlockedKey}`
       if (!seen.has(nextKey)) {
         seen.add(nextKey)
-        queue.push({ cat: nextCat, mouse: fleeing, unlocked: new Set(state.unlocked) })
+        queue.push({ cat: nextCat, mouse: fleeing, lastMouse: state.mouse, unlocked: new Set(state.unlocked) })
       }
     }
   }
