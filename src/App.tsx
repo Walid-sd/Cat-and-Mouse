@@ -122,6 +122,17 @@ function App() {
     return best
   }, [level])
 
+  const dangerDistance = useMemo(() => {
+    if (mode !== 'escape' || gameOver || victory) return null
+    const path = shortestPath(level.grid, cat, mouse, unlocked)
+    return path.length ? path.length - 1 : null
+  }, [mode, gameOver, victory, level, cat, mouse, unlocked])
+
+  const danger = dangerDistance !== null && dangerDistance > 0 && dangerDistance <= 3
+  const dangerNotice = dangerDistance === 1
+    ? 'DANGER — THE CAT IS ONE STEP AWAY.'
+    : `DANGER — THE CAT IS ${dangerDistance} STEPS AWAY.`
+
   const performMove = useCallback((delta: Point) => {
     if (screen !== 'game' || riddleOpen || gameOver || victory || thinking) return
 
@@ -316,7 +327,10 @@ function App() {
           <p className="eyebrow">{mode === 'escape' ? 'Escape protocol' : 'Hunt protocol'}</p>
           <h2>{level.name}</h2>
           <p className="subtitle">{level.subtitle}</p>
-          <div className="status-card"><span className={`status-dot ${thinking ? 'thinking' : ''} ${lastMover === mode && !thinking ? 'active' : ''}`} /><span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : notice}</span></div>
+          <div className={`status-card ${danger && !thinking ? 'danger' : ''}`} role={danger && !thinking ? 'alert' : undefined}>
+            <span className={`status-dot ${thinking ? 'thinking' : ''} ${danger && !thinking ? 'danger' : ''} ${lastMover === mode && !thinking && !danger ? 'active' : ''}`} />
+            <span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : danger ? dangerNotice : notice}</span>
+          </div>
           <div className="stats"><span>TURN <b>{moves}</b></span><span>GATES <b>{unlocked.size}/{level.gates.length}</b></span></div>
           <div className="legend"><div><b>🐭</b> MOUSE</div><div><b>🐱</b> CAT</div><div><b>▣</b> LOCKED GATE</div><div><b>✦</b> EXIT</div></div>
           <p className="rule">{mode === 'escape' ? 'The cat follows the shortest valid BFS route after every successful mouse step.' : 'You control the cat. After each cat move, the mouse takes one evasive turn.'}</p>
@@ -326,7 +340,7 @@ function App() {
         </aside>
 
         <section className="board-wrap">
-          <div className="board" style={{ gridTemplateColumns: `repeat(${level.grid[0].length}, 1fr)` }} aria-label={`${level.name} maze`}>
+          <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${level.grid[0].length}, 1fr)` }} aria-label={`${level.name} maze`}>
             {cells.map(({ cell, p }) => {
               const isMouse = key(p) === key(mouse)
               const isCat = key(p) === key(cat)
@@ -337,47 +351,32 @@ function App() {
                 {isExit && !isMouse && <span aria-hidden="true">✦</span>}
                 {isGate && !openGate && <span aria-hidden="true">▣</span>}
                 {isMouse && <span className={`actor mouse ${lastMover === 'escape' && !thinking ? 'moved' : ''}`} aria-label="Mouse">🐭</span>}
-                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${lastMover === 'hunt' && !thinking ? 'moved' : ''}`} aria-label="Cat">🐱</span>}
+                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${lastMover === 'hunt' && !thinking ? 'moved' : ''} ${danger && !thinking ? 'danger' : ''}`} aria-label="Cat">🐱</span>}
               </div>
             })}
           </div>
+
           <div className="controls" aria-label="Movement controls">
-            <button onClick={() => performMove({ row: -1, col: 0 })} aria-label="Move up">↑</button>
-            <button onClick={() => performMove({ row: 0, col: -1 })} aria-label="Move left">←</button>
-            <button onClick={() => performMove({ row: 1, col: 0 })} aria-label="Move down">↓</button>
-            <button onClick={() => performMove({ row: 0, col: 1 })} aria-label="Move right">→</button>
+            <button aria-label="Move up" onClick={() => performMove({ row: -1, col: 0 })}>↑</button>
+            <div><button aria-label="Move left" onClick={() => performMove({ row: 0, col: -1 })}>←</button><button aria-label="Move down" onClick={() => performMove({ row: 1, col: 0 })}>↓</button><button aria-label="Move right" onClick={() => performMove({ row: 0, col: 1 })}>→</button></div>
           </div>
         </section>
       </section>
 
-      {(riddleOpen || gameOver || victory) && <div className="overlay">
-        {riddleOpen && <div className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title">
-          <span className="modal-kicker">LOCKED GATE · RIDDLE {activeGate + 1}</span>
-          <h2 id="riddle-title">One question stands<br />between you and the next turn.</h2>
-          <p className="question">{level.riddles[activeGate]?.question}</p>
-          <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button key={choice} ref={i === 0 ? riddleFirstAnswer : undefined} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
-          {riddleError && <p className="riddle-error" role="alert">{riddleError}</p>}
-          <small>The chase is paused while you think. Press Escape to close.</small>
-        </div>}
-
-        {gameOver && <div className="modal result" role="dialog" aria-modal="true">
-          <span className="result-icon">{mode === 'escape' ? '🐱' : '🐭'}</span>
-          <span className="modal-kicker">{mode === 'escape' ? 'CAUGHT' : 'ESCAPED'}</span>
-          <h2>{mode === 'escape' ? 'The chase is over.' : 'The mouse got away.'}</h2>
-          <p>{notice}</p>
-          <button className="primary" onClick={() => reset()}>TRY AGAIN</button>
-          <button className="link" onClick={() => { clearTurnTimer(); setScreen('menu') }}>BACK TO MENU</button>
-        </div>}
-
-        {victory && <div className="modal result" role="dialog" aria-modal="true">
-          <span className="result-icon">{mode === 'escape' ? '🐭' : '🐱'}</span>
-          <span className="modal-kicker">{mode === 'escape' ? 'ESCAPED' : 'CAUGHT'}</span>
-          <h2>{mode === 'escape' ? 'You made it out.' : 'Perfect hunt.'}</h2>
-          <p>{mode === 'escape' ? 'The maze could not keep you.' : 'The mouse had nowhere left to run.'}</p>
-          {levelIndex < levels.length - 1 && <button className="primary" onClick={() => reset(mode, levelIndex + 1)}>NEXT LEVEL →</button>}
-          <button className="link" onClick={() => { clearTurnTimer(); setScreen('menu') }}>BACK TO MENU</button>
-        </div>}
+      {riddleOpen && level.riddles[activeGate] && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRiddleOpen(false) }}>
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title">
+          <p className="eyebrow">Gate {activeGate + 1} · Riddle</p>
+          <h2 id="riddle-title">{level.riddles[activeGate].question}</h2>
+          <div className="choices">
+            {level.riddles[activeGate].choices.map((choice, index) => <button key={choice} ref={index === 0 ? riddleFirstAnswer : undefined} onClick={() => answer(index)}>{choice}</button>)}
+          </div>
+          {riddleError && <p className="error" role="alert">{riddleError}</p>}
+          <button className="modal-close" onClick={() => { setRiddleOpen(false); setRiddleError('') }}>CLOSE</button>
+        </div>
       </div>}
+
+      {gameOver && <div className="modal-backdrop" role="presentation"><div className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">The hunt is over</p><h2 id="result-title">CAUGHT.</h2><p>{notice}</p><button onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {victory && <div className="modal-backdrop" role="presentation"><div className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">Maze cleared</p><h2 id="victory-title">ESCAPED.</h2><p>{mode === 'escape' ? 'You reached the exit.' : 'You caught the mouse.'}</p><button onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
     </main>
   )
 }
