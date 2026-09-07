@@ -66,9 +66,28 @@ function legalNeighbors(level, point, unlocked) {
     .filter(next => level.grid[next.row][next.col] !== 'G' || unlocked.has(key(next)))
 }
 
+function validateRoute(level, route, unlocked, label) {
+  if (!route.length) return `${label} returned no route`
+  if (key(route[0]) !== key(route.from)) return `${label} has the wrong starting tile`
+  if (key(route[route.length - 1]) !== key(route.to)) return `${label} has the wrong destination tile`
+  for (let i = 0; i < route.length; i += 1) {
+    const point = route[i]
+    if (!inside(level, point)) return `${label} leaves the grid at ${key(point)}`
+    const cell = level.grid[point.row][point.col]
+    if (cell === '#' || (cell === 'G' && !unlocked.has(key(point)))) return `${label} enters blocked tile ${key(point)}`
+    if (i > 0) {
+      const previous = route[i - 1]
+      const distance = Math.abs(point.row - previous.row) + Math.abs(point.col - previous.col)
+      if (distance !== 1) return `${label} jumps from ${key(previous)} to ${key(point)}`
+    }
+  }
+  return null
+}
+
 const failures = []
 for (const level of levels) {
   const allUnlocked = new Set(level.gates.map(key))
+  const locked = new Set()
   const starts = [
     ['mouse', level.mouseStart],
     ['cat', level.catStart],
@@ -83,13 +102,31 @@ for (const level of levels) {
 
   const escapeRoute = shortestPath(level, level.mouseStart, level.exit, allUnlocked)
   if (!escapeRoute.length) failures.push(`Level ${level.id}: mouse cannot reach exit with gates unlocked`)
+  else {
+    escapeRoute.from = level.mouseStart
+    escapeRoute.to = level.exit
+    const routeError = validateRoute(level, escapeRoute, allUnlocked, `Level ${level.id} escape route`)
+    if (routeError) failures.push(routeError)
+  }
 
   const hunterRoute = shortestPath(level, level.catStart, level.mouseStart, allUnlocked)
   if (!hunterRoute.length) failures.push(`Level ${level.id}: cat cannot reach mouse with gates unlocked`)
+  else {
+    hunterRoute.from = level.catStart
+    hunterRoute.to = level.mouseStart
+    const routeError = validateRoute(level, hunterRoute, allUnlocked, `Level ${level.id} hunter route`)
+    if (routeError) failures.push(routeError)
+  }
 
   for (const gate of level.gates) {
     if (!inside(level, gate) || level.grid[gate.row]?.[gate.col] !== 'G') {
       failures.push(`Level ${level.id}: gate ${key(gate)} is not a G tile`)
+    }
+    if (shortestPath(level, level.mouseStart, gate, locked).length > 0) {
+      failures.push(`Level ${level.id}: locked gate ${key(gate)} is incorrectly traversable`)
+    }
+    if (shortestPath(level, level.mouseStart, gate, new Set([key(gate)])).length === 0) {
+      failures.push(`Level ${level.id}: gate ${key(gate)} is not reachable when unlocked`)
     }
   }
 
@@ -110,4 +147,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, gates, and opening moves are valid.`)
+console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, route integrity, gates, and opening moves are valid.`)
