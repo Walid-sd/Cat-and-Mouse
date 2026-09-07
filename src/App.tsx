@@ -35,6 +35,7 @@ function App() {
   const [riddleError, setRiddleError] = useState('')
   const [gameOver, setGameOver] = useState(false)
   const [victory, setVictory] = useState(false)
+  const [rewardEarned, setRewardEarned] = useState(false)
   const [thinking, setThinking] = useState(false)
   const [lastMover, setLastMover] = useState<Mode | null>(null)
   const [notice, setNotice] = useState('Reach the exit before the cat finds you.')
@@ -84,6 +85,7 @@ function App() {
     setRiddleError('')
     setGameOver(false)
     setVictory(false)
+    setRewardEarned(false)
     setThinking(false)
     setLastMover(null)
     setMoves(0)
@@ -148,10 +150,11 @@ function App() {
   const win = useCallback(() => {
     clearTurnTimer()
     playSound('win')
+    setRewardEarned(profile.completed[mode] <= levelIndex)
     setVictory(true)
     setThinking(false)
     markComplete()
-  }, [clearTurnTimer, markComplete])
+  }, [clearTurnTimer, levelIndex, mode, profile.completed, markComplete])
 
   const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>, lastMouse: Point | null) => {
     const options = neighbors(grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
@@ -379,8 +382,8 @@ function App() {
         </section>
       </section>
       {riddleOpen && level.riddles[activeGate] && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRiddleOpen(false) }}><div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title"><p className="eyebrow">Gate {activeGate + 1} · Riddle</p><h2 id="riddle-title">{level.riddles[activeGate].question}</h2><div className="choices">{level.riddles[activeGate].choices.map((choice, index) => <button key={choice} ref={index === 0 ? riddleFirstAnswer : undefined} onClick={() => answer(index)}>{choice}</button>)}</div>{riddleError && <p className="error" role="alert">{riddleError}</p>}<button className="modal-close" onClick={() => { setRiddleOpen(false); setRiddleError('') }}>CLOSE</button></div></div>}
-      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="result-title">{resultTitle}</h2><p>{resultMessage}</p><p className="reward">🪙 Level reward: +10</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
-      {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="victory-title">{resultTitle}</h2><p>{resultMessage}</p><p className="reward">🪙 +10 coins · Total: {profile.coins}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="result-title">{resultTitle}</h2><p>{resultMessage}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="victory-title">{resultTitle}</h2><p>{resultMessage}</p>{rewardEarned ? <p className="reward">🪙 +10 coins · Total: {profile.coins}</p> : <p className="reward">No first-time reward · Total: {profile.coins}</p>}<button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
     </main>
   )
 }
