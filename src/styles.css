@@ -37,9 +37,11 @@ h1 em { font-style: normal; opacity: .35; }
 .side-panel h2 { margin: 8px 0 4px; font-size: 30px; letter-spacing: -.04em; }
 .subtitle { margin: 0 0 18px; opacity: .55; font-size: 13px; line-height: 1.45; }
 .status-card { display: flex; gap: 9px; align-items: flex-start; padding: 12px; border: 1px solid #343434; border-radius: 12px; background: #181818; font-size: 12px; line-height: 1.4; min-height: 50px; }
+.status-card.danger { border-color: #8a6250; box-shadow: inset 3px 0 0 #a87860; }
 .status-dot { width: 8px; height: 8px; flex: 0 0 8px; margin-top: 4px; border-radius: 50%; background: currentColor; opacity: .35; }
 .status-dot.thinking { animation: pulse .7s ease-in-out infinite alternate; opacity: .9; }
 .status-dot.active { animation: pulse .9s ease-in-out 1; opacity: .9; }
+.status-dot.danger { animation: danger-pulse .7s ease-in-out infinite alternate; opacity: 1; }
 .stats { display: flex; justify-content: space-between; padding: 15px 2px; border-bottom: 1px solid #2b2b2b; font-size: 10px; letter-spacing: .12em; opacity: .6; }
 .stats b { color: inherit; opacity: 1; margin-left: 5px; }
 .legend { display: grid; gap: 9px; padding: 16px 2px; font-size: 10px; letter-spacing: .1em; opacity: .58; }
@@ -66,6 +68,7 @@ h1 em { font-style: normal; opacity: .35; }
 .actor.mouse.moved { animation: arrive .24s cubic-bezier(.2,.9,.3,1.2); }
 .actor.cat.moved { animation: arrive .24s cubic-bezier(.2,.9,.3,1.2); }
 .actor.cat.thinking { animation: cat-think .25s ease-in-out infinite alternate; }
+.actor.cat.danger { animation: danger-cat .55s ease-in-out infinite alternate; }
 .controls { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 44px); gap: 7px; justify-content: center; margin-top: 18px; }
 .controls button { border: 1px solid #454545; background: #1a1a1a; color: inherit; border-radius: 10px; cursor: pointer; min-width: 48px; min-height: 44px; font-size: 20px; touch-action: manipulation; transition: transform .12s ease, background .12s ease; }
 .controls button:first-child { grid-column: 2; }
@@ -96,6 +99,8 @@ h1 em { font-style: normal; opacity: .35; }
 @keyframes tile-pop { 0% { transform: scale(.96); } 100% { transform: scale(1); } }
 @keyframes cat-think { from { transform: translateY(0); } to { transform: translateY(-2px) scale(1.04); } }
 @keyframes pulse { from { transform: scale(.8); } to { transform: scale(1.25); } }
+@keyframes danger-pulse { from { transform: scale(.85); } to { transform: scale(1.35); } }
+@keyframes danger-cat { from { transform: scale(1); } to { transform: scale(1.08); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
