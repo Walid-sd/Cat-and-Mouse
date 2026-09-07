@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cat-and-mouse-shell-v1'
+const CACHE_NAME = 'cat-and-mouse-shell-v2'
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -29,6 +29,10 @@ self.addEventListener('fetch', event => {
         }
         return response
       })
-      .catch(() => caches.match(request).then(cached => cached || caches.match('/index.html')))
+      .catch(() => caches.match(request).then(cached => {
+        if (cached) return cached
+        if (request.mode === 'navigate') return caches.match('/index.html')
+        return Response.error()
+      }))
   )
 })
