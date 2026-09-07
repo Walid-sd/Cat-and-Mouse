@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isMuted, playSound, primeAudio, toggleMute } from './audio'
 import { gridForMode, key, levels, neighbors, shortestPath, type Point } from './game'
-import { addCoins, characters, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, unlockCharacter, type PlayerProfile } from './progression'
+import { addCoins, characters, collectCoin as collectPersistentCoin, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, unlockCharacter, type PlayerProfile } from './progression'
 
 type Mode = 'escape' | 'hunt'
 type Screen = 'menu' | 'game'
@@ -30,7 +30,6 @@ function App() {
   const [cat, setCat] = useState<Point>(level.catStart)
   const [previousMouse, setPreviousMouse] = useState<Point | null>(null)
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set())
-  const [collectedCoins, setCollectedCoins] = useState<Set<string>>(new Set())
   const [activeGate, setActiveGate] = useState(0)
   const [riddleOpen, setRiddleOpen] = useState(false)
   const [riddleError, setRiddleError] = useState('')
@@ -80,7 +79,6 @@ function App() {
     setCat(l.catStart)
     setPreviousMouse(null)
     setUnlocked(new Set())
-    setCollectedCoins(new Set())
     setActiveGate(0)
     setRiddleOpen(false)
     setRiddleError('')
@@ -129,16 +127,15 @@ function App() {
 
   const collectCoin = useCallback((point: Point) => {
     const coin = coinKey(level.id, mode, point)
-    if (!coins.some(candidate => key(candidate) === key(point)) || collectedCoins.has(coin)) return
-    setCollectedCoins(previous => new Set(previous).add(coin))
+    if (!coins.some(candidate => key(candidate) === key(point)) || profile.collectedCoins.includes(coin)) return
     setProfile(previous => {
-      const next = addCoins(previous, 1)
+      const next = collectPersistentCoin(previous, coin)
       saveProfile(next)
       return next
     })
     playSound('gate')
     setNotice('+1 COIN — KEEP GOING.')
-  }, [coinKey, coins, collectedCoins, level.id, mode])
+  }, [coins, level.id, mode, profile.collectedCoins])
 
   const lose = useCallback((message = 'Caught. The shortest path wins.') => {
     clearTurnTimer()
@@ -340,25 +337,10 @@ function App() {
           <button className="mode-card" onClick={() => start('escape')}><span className="mode-icon">{selectedMouse.emoji}</span><strong>THE ESCAPE</strong><small>Play as the mouse</small><span className="play">ENTER MAZE →</span></button>
           <button className="mode-card dark" onClick={() => start('hunt')}><span className="mode-icon">{selectedCat.emoji}</span><strong>THE HUNT</strong><small>Play as the cat</small><span className="play">START HUNT →</span></button>
         </div>
-        <section className="character-panel" aria-label="Character shop and selection">
+        <section className="character-panel" aria-label="Character selection and shop">
           <div className="character-header"><span>CHARACTERS</span><strong>🪙 {profile.coins}</strong></div>
-          <p className="character-note">Unlock new runners and hunters with coins earned in the maze.</p>
-          <div className="character-group"><small>MOUSE</small><div className="character-row">{characters.filter(c => c.role === 'mouse').map(character => {
-            const isUnlocked = profile.unlocked.includes(character.id)
-            const isSelected = profile.selected.mouse === character.id
-            const canAfford = profile.coins >= character.cost
-            return <button key={character.id} className={`${isSelected ? 'character-card selected' : 'character-card'} ${!isUnlocked ? 'locked' : ''}`} onClick={() => chooseCharacter('mouse', character.id)} aria-pressed={isSelected} aria-label={`${character.name}, ${isUnlocked ? isSelected ? 'selected' : 'unlocked' : `costs ${character.cost} coins`}`}>
-              <span>{character.emoji}</span><b>{character.name}</b><small>{isUnlocked ? isSelected ? 'SELECTED' : 'UNLOCKED' : `🪙 ${character.cost}${canAfford ? ' · UNLOCK' : ' · LOCKED'}`}</small>
-            </button>
-          })}</div></div>
-          <div className="character-group"><small>CAT</small><div className="character-row">{characters.filter(c => c.role === 'cat').map(character => {
-            const isUnlocked = profile.unlocked.includes(character.id)
-            const isSelected = profile.selected.cat === character.id
-            const canAfford = profile.coins >= character.cost
-            return <button key={character.id} className={`${isSelected ? 'character-card selected' : 'character-card'} ${!isUnlocked ? 'locked' : ''}`} onClick={() => chooseCharacter('cat', character.id)} aria-pressed={isSelected} aria-label={`${character.name}, ${isUnlocked ? isSelected ? 'selected' : 'unlocked' : `costs ${character.cost} coins`}`}>
-              <span>{character.emoji}</span><b>{character.name}</b><small>{isUnlocked ? isSelected ? 'SELECTED' : 'UNLOCKED' : `🪙 ${character.cost}${canAfford ? ' · UNLOCK' : ' · LOCKED'}`}</small>
-            </button>
-          })}</div></div>
+          <div className="character-group"><small>MOUSE</small><div className="character-row">{characters.filter(c => c.role === 'mouse').map(character => { const unlockedCharacter = profile.unlocked.includes(character.id); const selected = profile.selected.mouse === character.id; return <button key={character.id} className={`${selected ? 'character-card selected' : 'character-card'} ${!unlockedCharacter ? 'locked' : ''}`} onClick={() => chooseCharacter('mouse', character.id)} aria-pressed={selected} aria-label={`${character.name}, ${unlockedCharacter ? (selected ? 'selected' : 'unlocked') : `${character.cost} coins to unlock`}`}><span>{character.emoji}</span><b>{character.name}</b><small>{selected ? 'SELECTED' : unlockedCharacter ? 'USE' : `🪙 ${character.cost}`}</small></button> })}</div></div>
+          <div className="character-group"><small>CAT</small><div className="character-row">{characters.filter(c => c.role === 'cat').map(character => { const unlockedCharacter = profile.unlocked.includes(character.id); const selected = profile.selected.cat === character.id; return <button key={character.id} className={`${selected ? 'character-card selected' : 'character-card'} ${!unlockedCharacter ? 'locked' : ''}`} onClick={() => chooseCharacter('cat', character.id)} aria-pressed={selected} aria-label={`${character.name}, ${unlockedCharacter ? (selected ? 'selected' : 'unlocked') : `${character.cost} coins to unlock`}`}><span>{character.emoji}</span><b>{character.name}</b><small>{selected ? 'SELECTED' : unlockedCharacter ? 'USE' : `🪙 ${character.cost}`}</small></button> })}</div></div>
         </section>
         <button className="sound-toggle" onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '◌ SOUND OFF' : '◉ SOUND ON'}</button>
         <p className="tip">Arrow keys / WASD · Touch controls · Solve riddles · Collect coins</p>
@@ -386,7 +368,7 @@ function App() {
           <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${grid[0].length}, 1fr)`, gridTemplateRows: `repeat(${grid.length}, 1fr)` }} aria-label={`${level.name} maze`}>
             {cells.map(({ cell, p }) => {
               const isMouse = key(p) === key(mouse), isCat = key(p) === key(cat), isExit = key(p) === key(level.exit), isGate = cell === 'G', openGate = isGate && unlocked.has(key(p))
-              const coinId = coinKey(level.id, mode, p), hasCoin = coins.some(coin => key(coin) === key(p)) && !collectedCoins.has(coinId) && !isMouse && !isCat
+              const coinId = coinKey(level.id, mode, p), hasCoin = coins.some(coin => key(coin) === key(p)) && !profile.collectedCoins.includes(coinId) && !isMouse && !isCat
               return <div key={key(p)} className={`tile ${cell === '#' ? 'wall' : 'floor'} ${isExit ? 'exit' : ''} ${isGate ? 'gate' : ''} ${openGate ? 'open-gate' : ''} ${isMouse ? 'has-mouse' : ''} ${isCat ? 'has-cat' : ''}`}>
                 {isExit && !isMouse && <span aria-hidden="true">✦</span>}{isGate && !openGate && <span aria-hidden="true">▣</span>}{hasCoin && <span className="coin" aria-label="Coin">🪙</span>}
                 {isMouse && <span className="actor mouse" aria-label="Mouse">{selectedMouse.emoji}</span>}{isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${danger && !thinking ? 'danger' : ''}`} aria-label="Cat">{selectedCat.emoji}</span>}
@@ -397,7 +379,7 @@ function App() {
         </section>
       </section>
       {riddleOpen && level.riddles[activeGate] && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRiddleOpen(false) }}><div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title"><p className="eyebrow">Gate {activeGate + 1} · Riddle</p><h2 id="riddle-title">{level.riddles[activeGate].question}</h2><div className="choices">{level.riddles[activeGate].choices.map((choice, index) => <button key={choice} ref={index === 0 ? riddleFirstAnswer : undefined} onClick={() => answer(index)}>{choice}</button>)}</div>{riddleError && <p className="error" role="alert">{riddleError}</p>}<button className="modal-close" onClick={() => { setRiddleOpen(false); setRiddleError('') }}>CLOSE</button></div></div>}
-      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="result-title">{resultTitle}</h2><p>{resultMessage}</p><p className="reward">🪙 Level reward: +{10}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="result-title">{resultTitle}</h2><p>{resultMessage}</p><p className="reward">🪙 Level reward: +10</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
       {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="victory-title">{resultTitle}</h2><p>{resultMessage}</p><p className="reward">🪙 +10 coins · Total: {profile.coins}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
     </main>
   )
