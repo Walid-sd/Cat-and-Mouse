@@ -27,6 +27,8 @@ On supported mobile and desktop browsers, the game can also be installed as a st
 
 ## Development
 
+**Node.js 24 or newer is required.**
+
 ```bash
 npm install
 npm run dev
@@ -38,7 +40,7 @@ Run the complete release verification locally:
 npm run test:release
 ```
 
-This runs TypeScript checking, level validation, gameplay solvability checks for both modes and every authored layout, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
+This runs TypeScript checking, level validation, gameplay turn and solvability checks for both modes and every authored layout, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
 
 Individual checks are also available:
 
