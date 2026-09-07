@@ -34,7 +34,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <section id="rewarded-ads-panel" class="rewarded-ads-panel" hidden aria-label="Optional rewarded ads">
+      <div>
+        <p class="rewarded-ads-eyebrow">OPTIONAL REWARD</p>
+        <strong>WATCH AN AD · +15 🪙</strong>
+        <p id="rewarded-ad-status" class="rewarded-ad-status" aria-live="polite">Rewarded ads are optional and never required to play.</p>
+      </div>
+      <button id="rewarded-ad-button" type="button" disabled>WATCH AD · +15 🪙</button>
+    </section>
     <button id="install-app" type="button" hidden aria-label="Install Cat and Mouse as an app">INSTALL APP</button>
+    <script src="/ads-config.js"></script>
+    <script src="/rewarded-ads.js"></script>
     <script src="/install.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
