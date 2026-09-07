@@ -71,16 +71,55 @@ export function neighbors(grid:string[],p:Point,unlocked:Set<string>) { return d
 
 export function validateLevels(source = levels): string[] {
   const errors: string[] = []
+  const seenLevelIds = new Set<number>()
+
   source.forEach(level => {
+    if (seenLevelIds.has(level.id)) errors.push(`Level ${level.id}: duplicate level id`)
+    seenLevelIds.add(level.id)
+
     const width = level.grid[0]?.length ?? 0
     if (!level.grid.length || !width) { errors.push(`Level ${level.id}: empty grid`); return }
     if (level.grid.some(row => row.length !== width)) errors.push(`Level ${level.id}: inconsistent row width`)
+
+    const allowedCells = new Set(['#', '.', 'M', 'C', 'E', 'G'])
+    const invalidCells = new Set<string>()
+    level.grid.forEach(row => [...row].forEach(cell => { if (!allowedCells.has(cell)) invalidCells.add(cell) }))
+    if (invalidCells.size) errors.push(`Level ${level.id}: invalid grid cell(s) ${[...invalidCells].join(', ')}`)
+
+    const markerCounts = { M: 0, C: 0, E: 0, G: 0 }
+    level.grid.forEach(row => [...row].forEach(cell => {
+      if (cell === 'M') markerCounts.M++
+      if (cell === 'C') markerCounts.C++
+      if (cell === 'E') markerCounts.E++
+      if (cell === 'G') markerCounts.G++
+    }))
+    if (markerCounts.M !== 1) errors.push(`Level ${level.id}: expected exactly one M marker, found ${markerCounts.M}`)
+    if (markerCounts.C !== 1) errors.push(`Level ${level.id}: expected exactly one C marker, found ${markerCounts.C}`)
+    if (markerCounts.E !== 1) errors.push(`Level ${level.id}: expected exactly one E marker, found ${markerCounts.E}`)
+    if (markerCounts.G !== level.gates.length) errors.push(`Level ${level.id}: grid/gate count mismatch`)
+
     const points = [level.mouseStart, level.catStart, level.exit]
     if (points.some(p => !inBounds(level.grid, p))) errors.push(`Level ${level.id}: start or exit is out of bounds`)
     if (level.gates.length !== level.riddles.length) errors.push(`Level ${level.id}: gate/riddle count mismatch`)
+
+    const seenGates = new Set<string>()
     for (const gate of level.gates) {
-      if (!inBounds(level.grid, gate) || level.grid[gate.row][gate.col] !== 'G') errors.push(`Level ${level.id}: gate ${key(gate)} is not marked G`)
+      const gateKey = key(gate)
+      if (seenGates.has(gateKey)) errors.push(`Level ${level.id}: duplicate gate ${gateKey}`)
+      seenGates.add(gateKey)
+      if (!inBounds(level.grid, gate) || level.grid[gate.row][gate.col] !== 'G') errors.push(`Level ${level.id}: gate ${gateKey} is not marked G`)
     }
+
+    const seenRiddles = new Set<string>()
+    level.riddles.forEach((riddleItem, index) => {
+      if (seenRiddles.has(riddleItem.id)) errors.push(`Level ${level.id}: duplicate riddle id ${riddleItem.id}`)
+      seenRiddles.add(riddleItem.id)
+      if (!riddleItem.question.trim()) errors.push(`Level ${level.id}: riddle ${index + 1} has no question`)
+      if (riddleItem.choices.length !== 4) errors.push(`Level ${level.id}: riddle ${index + 1} must have exactly 4 choices`)
+      if (riddleItem.answer < 0 || riddleItem.answer >= riddleItem.choices.length) errors.push(`Level ${level.id}: riddle ${index + 1} answer is out of range`)
+      if (!riddleItem.explanation.trim()) errors.push(`Level ${level.id}: riddle ${index + 1} has no explanation`)
+    })
+
     if (level.grid[level.mouseStart.row]?.[level.mouseStart.col] !== 'M') errors.push(`Level ${level.id}: mouseStart is not M`)
     if (level.grid[level.catStart.row]?.[level.catStart.col] !== 'C') errors.push(`Level ${level.id}: catStart is not C`)
     if (level.grid[level.exit.row]?.[level.exit.col] !== 'E') errors.push(`Level ${level.id}: exit is not E`)
