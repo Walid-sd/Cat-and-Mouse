@@ -35,11 +35,10 @@ if (!progression.includes('const previousCompleted = profile.completed[mode]')) 
 if (!progression.includes('return addCoins({ ...profile, completed: { ...profile.completed, [mode]: completed } }, LEVEL_COMPLETION_BONUS)')) failures.push('First-time level completion must award the configured coin bonus.')
 
 for (const required of [
+  'Character selection and shop',
   'unlockCharacter',
-  'Character shop and selection',
-  'Unlock new runners and hunters with coins earned in the maze.',
   'character.cost',
-  'UNLOCKED',
+  'SELECTED',
   'LOCKED',
 ]) {
   if (!app.includes(required)) failures.push(`Character shop UI is missing: ${required}`)
