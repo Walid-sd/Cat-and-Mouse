@@ -32,9 +32,10 @@ if (!failures.length) {
 
     if (html.includes('/src/main.tsx')) failures.push('Production index.html must not reference source TypeScript entrypoints.')
     if (!html.includes('manifest.webmanifest')) failures.push('Production index.html must retain the PWA manifest reference.')
+    if (!html.includes('/ads-config.js') || !html.includes('/rewarded-ads.js')) failures.push('Production index.html must retain the optional rewarded ads integration.')
   }
 
-  for (const required of ['manifest.webmanifest', 'icon.svg', 'sw.js', 'robots.txt', '_headers']) {
+  for (const required of ['manifest.webmanifest', 'icon.svg', 'sw.js', 'robots.txt', '_headers', 'ads-config.js', 'rewarded-ads.js']) {
     if (!(await exists(new URL(`../dist/${required}`, import.meta.url)))) failures.push(`Production public asset is missing: ${required}`)
   }
 }
@@ -44,4 +45,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Build artifact smoke test passed: production HTML, generated assets, PWA files, and public deployment files are present and internally referenced.')
+console.log('Build artifact smoke test passed: production HTML, generated assets, PWA files, deployment files, and rewarded ads assets are present and internally referenced.')
