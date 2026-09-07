@@ -30,24 +30,24 @@ npm install
 npm run dev
 ```
 
-Validate the level data:
+Run the complete release verification locally:
 
 ```bash
-npm run validate:levels
+npm run test:release
 ```
 
-Run the gameplay, accessibility, and PWA smoke tests:
+This runs TypeScript checking, level validation, gameplay solvability checks for both modes, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
+
+Individual checks are also available:
 
 ```bash
+npm run typecheck
+npm run validate:levels
 npm run test:gameplay
 npm run test:accessibility
 npm run test:pwa
-```
-
-Production build:
-
-```bash
+npm run test:deployment
 npm run build
 ```
 
-The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs the validation and smoke tests before the production build.
+The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs the same release checks before the production build.
