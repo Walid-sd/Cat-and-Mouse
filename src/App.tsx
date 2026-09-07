@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isMuted, playSound, primeAudio, toggleMute } from './audio'
-import { key, levels, neighbors, shortestPath, type Point } from './game'
+import { key, levels, neighbors, setActiveMode, shortestPath, type Point } from './game'
 
 type Mode = 'escape' | 'hunt'
 type Screen = 'menu' | 'game'
@@ -57,6 +57,7 @@ function App() {
 
   const reset = useCallback((m: Mode = mode, index: number = levelIndex) => {
     clearTurnTimer()
+    setActiveMode(m)
     const l = levels[index]
     setMode(m)
     setLevelIndex(index)
