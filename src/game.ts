@@ -88,27 +88,34 @@ export function directionFrom(from: Point, to: Point): Direction | null {
 export function hasLineOfSight(grid: string[], observer: Point, target: Point, _facing: Direction | null, unlocked: Set<string>): boolean {
   if (same(observer, target)) return false
 
-  const delta = { row: target.row - observer.row, col: target.col - observer.col }
-  const sameRow = delta.row === 0
-  const sameColumn = delta.col === 0
-  // Hunt vision is omnidirectional: the mouse can see equally far forward,
-  // backward, left, or right. It does not need to be facing the cat.
-  if (!sameRow && !sameColumn) return false
+  // Hunt vision is truly omnidirectional. The mouse can see the cat in front,
+  // behind, sideways, or diagonally at any distance, provided the grid cells
+  // between them are open. Facing is intentionally irrelevant.
+  let x0 = observer.col
+  let y0 = observer.row
+  const x1 = target.col
+  const y1 = target.row
+  const dx = Math.abs(x1 - x0)
+  const sx = x0 < x1 ? 1 : -1
+  const dy = -Math.abs(y1 - y0)
+  const sy = y0 < y1 ? 1 : -1
+  let error = dx + dy
 
-  const distance = Math.abs(delta.row) + Math.abs(delta.col)
-  const step = {
-    row: Math.sign(delta.row),
-    col: Math.sign(delta.col),
-  }
-  for (let currentDistance = 1; currentDistance < distance; currentDistance += 1) {
-    const point = {
-      row: observer.row + step.row * currentDistance,
-      col: observer.col + step.col * currentDistance,
+  while (true) {
+    const point = { row: y0, col: x0 }
+    if (!same(point, observer) && !canEnter(grid, point, unlocked)) return false
+    if (x0 === x1 && y0 === y1) return true
+
+    const doubledError = 2 * error
+    if (doubledError >= dy) {
+      error += dy
+      x0 += sx
     }
-    if (!canEnter(grid, point, unlocked)) return false
+    if (doubledError <= dx) {
+      error += dx
+      y0 += sy
+    }
   }
-
-  return canEnter(grid, target, unlocked)
 }
 
 export function chooseMouseMove(
