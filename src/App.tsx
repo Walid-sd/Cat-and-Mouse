@@ -350,6 +350,16 @@ function App() {
     [level, mode],
   )
 
+  const resultTitle = gameOver
+    ? (mode === 'escape' ? 'CAUGHT.' : 'ESCAPED.')
+    : (mode === 'escape' ? 'ESCAPED.' : 'CAUGHT.')
+  const resultEyebrow = gameOver
+    ? (mode === 'escape' ? 'The hunt is over' : 'The mouse got away')
+    : (mode === 'escape' ? 'Maze cleared' : 'Hunt successful')
+  const resultMessage = gameOver
+    ? notice
+    : (mode === 'escape' ? 'You reached the exit.' : 'You caught the mouse.')
+
   if (screen === 'menu') {
     return (
       <main className="shell menu">
@@ -435,8 +445,8 @@ function App() {
         </div>
       </div>}
 
-      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">The hunt is over</p><h2 id="result-title">CAUGHT.</h2><p>{notice}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
-      {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">Maze cleared</p><h2 id="victory-title">ESCAPED.</h2><p>{mode === 'escape' ? 'You reached the exit.' : 'You caught the mouse.'}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="result-title">{resultTitle}</h2><p>{resultMessage}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">{resultEyebrow}</p><h2 id="victory-title">{resultTitle}</h2><p>{resultMessage}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
     </main>
   )
 }
