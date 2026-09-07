@@ -34,12 +34,13 @@ function App() {
   const [gameOver, setGameOver] = useState(false)
   const [victory, setVictory] = useState(false)
   const [thinking, setThinking] = useState(false)
+  const [lastMover, setLastMover] = useState<Mode | null>(null)
   const [notice, setNotice] = useState('Reach the exit before the cat finds you.')
   const [moves, setMoves] = useState(0)
   const [progress, setProgress] = useState<Progress>(() => loadProgress())
   const turnTimer = useRef<number | null>(null)
-  const riddleFirstAnswerRef = useRef<HTMLButtonElement | null>(null)
-  const riddleTriggerRef = useRef<HTMLElement | null>(null)
+  const lastFocusedElement = useRef<HTMLElement | null>(null)
+  const riddleFirstAnswer = useRef<HTMLButtonElement | null>(null)
 
   const clearTurnTimer = useCallback(() => {
     if (turnTimer.current !== null) {
@@ -64,6 +65,7 @@ function App() {
     setGameOver(false)
     setVictory(false)
     setThinking(false)
+    setLastMover(null)
     setMoves(0)
     setNotice(m === 'escape' ? 'Reach the exit before the cat finds you.' : 'Catch the mouse before it reaches the exit.')
   }, [clearTurnTimer, levelIndex, mode])
@@ -95,7 +97,6 @@ function App() {
     markComplete()
   }, [clearTurnTimer, markComplete])
 
-  // Hunt mode: the player controls the cat; the mouse gets exactly one evasive turn.
   const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>) => {
     const options = neighbors(level.grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
     if (!options.length) return null
@@ -124,8 +125,8 @@ function App() {
 
     const targetKey = key(target)
     if (cell === 'G' && !unlocked.has(targetKey)) {
+      lastFocusedElement.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       const gateIndex = level.gates.findIndex(g => key(g) === targetKey)
-      riddleTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       setActiveGate(gateIndex < 0 ? 0 : gateIndex)
       setRiddleError('')
       setRiddleOpen(true)
@@ -133,6 +134,7 @@ function App() {
     }
 
     setMoves(value => value + 1)
+    setLastMover(mode)
 
     if (mode === 'escape') {
       setMouse(target)
@@ -185,8 +187,31 @@ function App() {
   }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, level, unlocked, lose, win, mouseTurn])
 
   useEffect(() => {
+    if (!riddleOpen) return
+    const focusTimer = window.setTimeout(() => riddleFirstAnswer.current?.focus(), 0)
+    return () => window.clearTimeout(focusTimer)
+  }, [riddleOpen, activeGate])
+
+  useEffect(() => {
+    if (riddleOpen) return
+    const element = lastFocusedElement.current
+    if (element && document.contains(element)) {
+      element.focus()
+      lastFocusedElement.current = null
+    }
+  }, [riddleOpen])
+
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(event.target.tagName)) return
+      if (riddleOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          setRiddleOpen(false)
+          setRiddleError('')
+        }
+        return
+      }
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable)) return
 
       const movesByKey: Record<string, Point> = {
         ArrowUp: { row: -1, col: 0 }, w: { row: -1, col: 0 }, W: { row: -1, col: 0 },
@@ -202,35 +227,7 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [performMove])
-
-  useEffect(() => {
-    if (!riddleOpen) return
-    const frame = window.requestAnimationFrame(() => riddleFirstAnswerRef.current?.focus())
-    return () => window.cancelAnimationFrame(frame)
-  }, [riddleOpen, activeGate])
-
-  useEffect(() => {
-    if (riddleOpen) return
-    const trigger = riddleTriggerRef.current
-    if (trigger) {
-      riddleTriggerRef.current = null
-      window.requestAnimationFrame(() => trigger.focus())
-    }
-  }, [riddleOpen])
-
-  useEffect(() => {
-    if (!riddleOpen) return
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setRiddleOpen(false)
-        setRiddleError('')
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [riddleOpen])
+  }, [performMove, riddleOpen])
 
   const answer = (choice: number) => {
     const riddle = level.riddles[activeGate]
@@ -285,7 +282,7 @@ function App() {
           <p className="eyebrow">{mode === 'escape' ? 'Escape protocol' : 'Hunt protocol'}</p>
           <h2>{level.name}</h2>
           <p className="subtitle">{level.subtitle}</p>
-          <div className="status-card"><span className="status-dot" /><span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : notice}</span></div>
+          <div className="status-card"><span className={`status-dot ${thinking ? 'thinking' : ''} ${lastMover === mode && !thinking ? 'active' : ''}`} /><span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : notice}</span></div>
           <div className="stats"><span>TURN <b>{moves}</b></span><span>GATES <b>{unlocked.size}/{level.gates.length}</b></span></div>
           <div className="legend"><div><b>🐭</b> MOUSE</div><div><b>🐱</b> CAT</div><div><b>▣</b> LOCKED GATE</div><div><b>✦</b> EXIT</div></div>
           <p className="rule">{mode === 'escape' ? 'The cat follows the shortest valid BFS route after every successful mouse step.' : 'You control the cat. After each cat move, the mouse takes one evasive turn.'}</p>
@@ -302,11 +299,11 @@ function App() {
               const isExit = key(p) === key(level.exit)
               const isGate = cell === 'G'
               const openGate = isGate && unlocked.has(key(p))
-              return <div key={key(p)} className={`tile ${cell === '#' ? 'wall' : 'floor'} ${isExit ? 'exit' : ''} ${isGate ? 'gate' : ''} ${openGate ? 'open-gate' : ''}`}>
+              return <div key={key(p)} className={`tile ${cell === '#' ? 'wall' : 'floor'} ${isExit ? 'exit' : ''} ${isGate ? 'gate' : ''} ${openGate ? 'open-gate' : ''} ${isMouse ? 'has-mouse' : ''} ${isCat ? 'has-cat' : ''}`}>
                 {isExit && !isMouse && <span aria-hidden="true">✦</span>}
                 {isGate && !openGate && <span aria-hidden="true">▣</span>}
-                {isMouse && <span className="actor mouse" aria-label="Mouse">🐭</span>}
-                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''}`} aria-label="Cat">🐱</span>}
+                {isMouse && <span className={`actor mouse ${lastMover === 'escape' && !thinking ? 'moved' : ''}`} aria-label="Mouse">🐭</span>}
+                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${lastMover === 'hunt' && !thinking ? 'moved' : ''}`} aria-label="Cat">🐱</span>}
               </div>
             })}
           </div>
@@ -324,7 +321,7 @@ function App() {
           <span className="modal-kicker">LOCKED GATE · RIDDLE {activeGate + 1}</span>
           <h2 id="riddle-title">One question stands<br />between you and the next turn.</h2>
           <p className="question">{level.riddles[activeGate]?.question}</p>
-          <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button ref={i === 0 ? riddleFirstAnswerRef : undefined} key={choice} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
+          <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button key={choice} ref={i === 0 ? riddleFirstAnswer : undefined} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
           {riddleError && <p className="riddle-error" role="alert">{riddleError}</p>}
           <small>The chase is paused while you think. Press Escape to close.</small>
         </div>}
