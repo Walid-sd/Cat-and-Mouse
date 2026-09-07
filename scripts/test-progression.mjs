@@ -1,4 +1,6 @@
-const source = await (await fetch('https://raw.githubusercontent.com/Walid-sd/Cat-and-Mouse/main/src/progression.ts')).text()
+import { readFile } from 'node:fs/promises'
+
+const source = await readFile(new URL('../src/progression.ts', import.meta.url), 'utf8')
 const failures = []
 
 for (const required of [
