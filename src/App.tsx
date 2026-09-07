@@ -54,6 +54,7 @@ function App() {
   }, [])
 
   useEffect(() => clearTurnTimer, [clearTurnTimer])
+  useEffect(() => setActiveMode(mode), [mode])
 
   const reset = useCallback((m: Mode = mode, index: number = levelIndex) => {
     clearTurnTimer()
@@ -323,7 +324,7 @@ function App() {
 
   const cells = useMemo(
     () => level.grid.flatMap((row, r) => [...row].map((cell, c) => ({ cell, p: { row: r, col: c } }))),
-    [level],
+    [level, mode],
   )
 
   if (screen === 'menu') {
