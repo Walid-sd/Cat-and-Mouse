@@ -84,6 +84,51 @@ function validateRoute(level, route, from, to, unlocked, label) {
   return null
 }
 
+// Searches the actual Escape turn model: a player may unlock an adjacent gate
+// without spending a turn, then each successful move advances the cat one BFS step.
+// This proves every level has at least one genuinely playable winning strategy.
+function canEscape(level) {
+  const start = { mouse: level.mouseStart, cat: level.catStart, unlocked: new Set() }
+  const queue = [start]
+  const seen = new Set([`${key(start.mouse)}|${key(start.cat)}|`])
+
+  for (let i = 0; i < queue.length; i += 1) {
+    const state = queue[i]
+    const unlockedKey = [...state.unlocked].sort().join(',')
+
+    // Solving a riddle is free: attempting to enter an adjacent locked gate opens it.
+    for (const gate of level.gates) {
+      const gateKey = key(gate)
+      if (state.unlocked.has(gateKey)) continue
+      if (Math.abs(gate.row - state.mouse.row) + Math.abs(gate.col - state.mouse.col) !== 1) continue
+      const nextUnlocked = new Set(state.unlocked)
+      nextUnlocked.add(gateKey)
+      const nextKey = `${key(state.mouse)}|${key(state.cat)}|${[...nextUnlocked].sort().join(',')}`
+      if (!seen.has(nextKey)) {
+        seen.add(nextKey)
+        queue.push({ mouse: state.mouse, cat: state.cat, unlocked: nextUnlocked })
+      }
+    }
+
+    for (const nextMouse of legalNeighbors(level, state.mouse, state.unlocked)) {
+      if (key(nextMouse) === key(state.cat)) continue
+      if (key(nextMouse) === key(level.exit)) return true
+
+      const route = shortestPath(level, state.cat, nextMouse, state.unlocked)
+      const nextCat = route.length > 1 ? route[1] : state.cat
+      if (key(nextCat) === key(nextMouse)) continue
+
+      const nextKey = `${key(nextMouse)}|${key(nextCat)}|${unlockedKey}`
+      if (!seen.has(nextKey)) {
+        seen.add(nextKey)
+        queue.push({ mouse: nextMouse, cat: nextCat, unlocked: new Set(state.unlocked) })
+      }
+    }
+  }
+
+  return false
+}
+
 const failures = []
 for (const level of levels) {
   const allUnlocked = new Set(level.gates.map(key))
@@ -130,6 +175,8 @@ for (const level of levels) {
     }
   }
 
+  if (!canEscape(level)) failures.push(`Level ${level.id}: no winning Escape strategy survives the cat's BFS response`)
+
   if (escapeRoute.length && level.gates.length) {
     const routeKeys = new Set(escapeRoute.map(key))
     const optional = level.gates.filter(gate => !routeKeys.has(key(gate)))
@@ -147,4 +194,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, route integrity, gates, and opening moves are valid.`)
+console.log(`Gameplay smoke test passed for ${levels.length} levels: starts, routes, route integrity, gates, opening moves, and Escape solvability are valid.`)
