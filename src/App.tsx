@@ -123,9 +123,6 @@ function App() {
       const mobility = neighbors(level.grid, option, currentUnlocked).filter(p => key(p) !== key(currentCat)).length
       const reversePenalty = previousKey === key(option) ? 7 : 0
 
-      // Look one turn ahead: assume the cat chooses its best immediate approach
-      // to this candidate. This makes the mouse prefer positions that remain
-      // difficult to reach, rather than simply maximizing today's distance.
       let worstCaseDistance = distance ? distance - 1 : 999
       if (catOptions.length) {
         worstCaseDistance = Math.min(...catOptions.map(catOption => {
@@ -134,8 +131,6 @@ function App() {
         }))
       }
 
-      // Distance from the current cat is still the primary survival signal.
-      // Exit progress and available escape branches break common corridor ties.
       const score = distance * 8 + worstCaseDistance * 5 - exitDistance * 2 + mobility * 2 - reversePenalty
       if (score > bestScore) {
         bestScore = score
@@ -380,7 +375,7 @@ function App() {
         </aside>
 
         <section className="board-wrap">
-          <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${level.grid[0].length}, 1fr)` }} aria-label={`${level.name} maze`}>
+          <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${level.grid[0].length}, 1fr)`, gridTemplateRows: `repeat(${level.grid.length}, 1fr)` }} aria-label={`${level.name} maze`}>
             {cells.map(({ cell, p }) => {
               const isMouse = key(p) === key(mouse)
               const isCat = key(p) === key(cat)
