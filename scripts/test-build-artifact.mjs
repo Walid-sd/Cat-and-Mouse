@@ -2,7 +2,6 @@ import { access, readFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { join } from 'node:path'
 
-const root = new URL('../', import.meta.url)
 const dist = new URL('../dist/', import.meta.url)
 const failures = []
 
@@ -25,7 +24,7 @@ if (!failures.length) {
     const html = await readFile(indexPath, 'utf8')
     if (!html.includes('<div id="root"></div>')) failures.push('Production index.html is missing the application root.')
 
-    const references = [...html.matchAll(/(?:src|href)="(assets\/[^"?#]+)"/g)].map(match => match[1])
+    const references = [...html.matchAll(/(?:src|href)="(\/?assets\/[^"?#]+)"/g)].map(match => match[1].replace(/^\//, ''))
     if (!references.length) failures.push('Production index.html does not reference generated assets.')
     for (const relativePath of references) {
       if (!(await exists(join(dist.pathname, relativePath)))) failures.push(`Production asset is missing: ${relativePath}`)
