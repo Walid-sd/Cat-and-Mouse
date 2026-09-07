@@ -22,7 +22,7 @@ const costs = [...source.matchAll(/cost:\s*(\d+)/g)].map(match => Number(match[1
 if (!costs.length || costs.some(cost => cost !== 0)) failures.push('All initial characters must be free in this phase.')
 if (!source.includes("const PROFILE_KEY = 'cat-and-mouse-profile-v2'")) failures.push('Progression must use a versioned storage key.')
 if (!source.includes('coins: profile.coins - character.cost')) failures.push('Character unlocks must deduct coins safely.')
-if (!source.includes('Math.max(profile.completed[mode], levelIndex + 1)')) failures.push('Level completion must never reduce progression.')
+if (!source.includes('const previousCompleted = profile.completed[mode]')) failures.push('Level completion must never reduce progression or farm repeat-completion rewards.')
 
 if (failures.length) {
   console.error(failures.join('\n'))
