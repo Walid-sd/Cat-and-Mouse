@@ -61,8 +61,6 @@ h1 em { font-style: normal; opacity: .35; }
 .tile.gate { background: #bdb4a2; }
 .tile.open-gate { background: #e7e2d7; }
 .tile.has-mouse, .tile.has-cat { z-index: 2; }
-.tile.has-mouse { animation: tile-pop .22s ease-out; }
-.tile.has-cat { animation: tile-pop .22s ease-out; }
 .tile > span:not(.actor) { font-size: clamp(8px, 1.7vw, 17px); opacity: .65; }
 .actor { position: relative; z-index: 3; display: block; line-height: 1; font-size: clamp(14px, 3.1vw, 29px); user-select: none; filter: drop-shadow(0 2px 2px #0005); }
 .actor.mouse.moved { animation: arrive .24s cubic-bezier(.2,.9,.3,1.2); }
@@ -91,12 +89,11 @@ h1 em { font-style: normal; opacity: .35; }
 .result p { opacity: .62; line-height: 1.5; }
 .result button:not(.modal-close) { width: 100%; min-height: 48px; margin-top: 10px; border: 0; border-radius: 10px; cursor: pointer; background: #f5f2ea; color: #111; font-weight: 800; }
 
-@keyframes arrive { 0% { transform: scale(.78); opacity: .35; } 65% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
-@keyframes tile-pop { 0% { transform: scale(.96); } 100% { transform: scale(1); } }
-@keyframes cat-think { from { transform: translateY(0); } to { transform: translateY(-2px) scale(1.04); } }
+@keyframes arrive { 0% { transform: translateY(2px); opacity: .35; } 65% { transform: translateY(-1px); opacity: 1; } 100% { transform: translateY(0); } }
+@keyframes cat-think { from { transform: translateY(0); } to { transform: translateY(-1px); } }
 @keyframes pulse { from { transform: scale(.8); } to { transform: scale(1.25); } }
 @keyframes danger-pulse { from { transform: scale(.85); } to { transform: scale(1.35); } }
-@keyframes danger-cat { from { transform: scale(1); } to { transform: scale(1.08); } }
+@keyframes danger-cat { from { transform: translateY(0); } to { transform: translateY(-1px); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
