@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isMuted, playSound, primeAudio, toggleMute } from './audio'
-import { key, levels, neighbors, setActiveMode, shortestPath, type Point } from './game'
+import { gridForMode, key, levels, neighbors, shortestPath, type Point } from './game'
 
 type Mode = 'escape' | 'hunt'
 type Screen = 'menu' | 'game'
@@ -26,6 +26,7 @@ function App() {
   const [mode, setMode] = useState<Mode>('escape')
   const [levelIndex, setLevelIndex] = useState(0)
   const level = levels[levelIndex]
+  const grid = gridForMode(level, mode)
   const [mouse, setMouse] = useState<Point>(level.mouseStart)
   const [cat, setCat] = useState<Point>(level.catStart)
   const [previousMouse, setPreviousMouse] = useState<Point | null>(null)
@@ -55,11 +56,9 @@ function App() {
   }, [])
 
   useEffect(() => clearTurnTimer, [clearTurnTimer])
-  useEffect(() => setActiveMode(mode), [mode])
 
   const reset = useCallback((m: Mode = mode, index: number = levelIndex) => {
     clearTurnTimer()
-    setActiveMode(m)
     const l = levels[index]
     setMode(m)
     setLevelIndex(index)
@@ -111,25 +110,25 @@ function App() {
   }, [clearTurnTimer, markComplete])
 
   const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>, lastMouse: Point | null) => {
-    const options = neighbors(level.grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
+    const options = neighbors(grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
     if (!options.length) return null
 
-    const catOptions = neighbors(level.grid, currentCat, currentUnlocked).filter(p => key(p) !== key(currentMouse))
+    const catOptions = neighbors(grid, currentCat, currentUnlocked).filter(p => key(p) !== key(currentMouse))
     const previousKey = lastMouse ? key(lastMouse) : null
 
     let best = options[0]
     let bestScore = -Infinity
     for (const option of options) {
-      const distance = shortestPath(level.grid, currentCat, option, currentUnlocked).length
-      const exitPath = shortestPath(level.grid, option, level.exit, currentUnlocked)
+      const distance = shortestPath(grid, currentCat, option, currentUnlocked).length
+      const exitPath = shortestPath(grid, option, level.exit, currentUnlocked)
       const exitDistance = exitPath.length ? exitPath.length - 1 : 999
-      const mobility = neighbors(level.grid, option, currentUnlocked).filter(p => key(p) !== key(currentCat)).length
+      const mobility = neighbors(grid, option, currentUnlocked).filter(p => key(p) !== key(currentCat)).length
       const reversePenalty = previousKey === key(option) ? 7 : 0
 
       let worstCaseDistance = distance ? distance - 1 : 999
       if (catOptions.length) {
         worstCaseDistance = Math.min(...catOptions.map(catOption => {
-          const path = shortestPath(level.grid, catOption, option, currentUnlocked)
+          const path = shortestPath(grid, catOption, option, currentUnlocked)
           return path.length ? path.length - 1 : 999
         }))
       }
@@ -141,13 +140,13 @@ function App() {
       }
     }
     return best
-  }, [level])
+  }, [grid, level.exit])
 
   const dangerDistance = useMemo(() => {
     if (mode !== 'escape' || gameOver || victory) return null
-    const path = shortestPath(level.grid, cat, mouse, unlocked)
+    const path = shortestPath(grid, cat, mouse, unlocked)
     return path.length ? path.length - 1 : null
-  }, [mode, gameOver, victory, level, cat, mouse, unlocked])
+  }, [mode, gameOver, victory, grid, cat, mouse, unlocked])
 
   const danger = dangerDistance !== null && dangerDistance > 0 && dangerDistance <= 3
   const dangerNotice = dangerDistance === 1
@@ -159,7 +158,7 @@ function App() {
 
     const actor = mode === 'escape' ? mouse : cat
     const target = { row: actor.row + delta.row, col: actor.col + delta.col }
-    const cell = level.grid[target.row]?.[target.col]
+    const cell = grid[target.row]?.[target.col]
     if (!cell || cell === '#') return
 
     const targetKey = key(target)
@@ -192,7 +191,7 @@ function App() {
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
         playSound('opponent')
-        const path = shortestPath(level.grid, cat, target, unlocked)
+        const path = shortestPath(grid, cat, target, unlocked)
         if (path.length > 1) {
           const nextCat = path[1]
           setCat(nextCat)
@@ -229,7 +228,7 @@ function App() {
         turnTimer.current = null
       }, 250)
     }
-  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, level, unlocked, previousMouse, lose, win, mouseTurn])
+  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, grid, level, unlocked, previousMouse, lose, win, mouseTurn])
 
   const toggleSound = () => {
     const nextMuted = toggleMute()
@@ -346,8 +345,8 @@ function App() {
   }
 
   const cells = useMemo(
-    () => level.grid.flatMap((row, r) => [...row].map((cell, c) => ({ cell, p: { row: r, col: c } }))),
-    [level, mode],
+    () => grid.flatMap((row, r) => [...row].map((cell, c) => ({ cell, p: { row: r, col: c } }))),
+    [grid],
   )
 
   const resultTitle = gameOver
@@ -410,7 +409,7 @@ function App() {
         </aside>
 
         <section className="board-wrap">
-          <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${level.grid[0].length}, 1fr)`, gridTemplateRows: `repeat(${level.grid.length}, 1fr)` }} aria-label={`${level.name} maze`}>
+          <div className={`board ${danger && !thinking ? 'danger' : ''}`} style={{ gridTemplateColumns: `repeat(${grid[0].length}, 1fr)`, gridTemplateRows: `repeat(${grid.length}, 1fr)` }} aria-label={`${level.name} maze`}>
             {cells.map(({ cell, p }) => {
               const isMouse = key(p) === key(mouse)
               const isCat = key(p) === key(cat)
