@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isMuted, playSound, primeAudio, toggleMute } from './audio'
-import { gridForMode, key, levels, neighbors, shortestPath, type Point } from './game'
-import { addCoins, characters, collectCoin as collectPersistentCoin, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, unlockCharacter, type PlayerProfile } from './progression'
+import { chooseMouseMove, directionFrom, gridForMode, key, levels, shortestPath, type Point } from './game'
+import { characters, collectCoin as collectPersistentCoin, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, unlockCharacter, type PlayerProfile } from './progression'
 
 type Mode = 'escape' | 'hunt'
 type Screen = 'menu' | 'game'
@@ -20,6 +20,42 @@ function loadLegacyProgress(): Record<Mode, number> {
   }
 }
 
+function initialMouseFacing(grid: string[], mouse: Point, exit: Point): Point | null {
+  const path = shortestPath(grid, mouse, exit, new Set())
+  return path.length > 1 ? directionFrom(mouse, path[1]) : null
+}
+
+function chooseCatMove(grid: string[], cat: Point, target: Point, unlocked: Set<string>, previousCat: Point | null): Point | null {
+  const options = shortestPath(grid, cat, target, unlocked).length > 1
+    ? [shortestPath(grid, cat, target, unlocked)[1], ...shortestPath(grid, cat, target, unlocked).slice(2)]
+    : []
+  const legal = options.length ? [options[0], ...options.slice(1)] : []
+  const neighbors = [
+    { row: cat.row - 1, col: cat.col },
+    { row: cat.row, col: cat.col + 1 },
+    { row: cat.row + 1, col: cat.col },
+    { row: cat.row, col: cat.col - 1 },
+  ].filter(point => grid[point.row]?.[point.col] && grid[point.row][point.col] !== '#' && (grid[point.row][point.col] !== 'G' || unlocked.has(key(point))))
+  if (!neighbors.length) return null
+
+  const preferred = legal[0]
+  const reverseKey = previousCat ? key(previousCat) : null
+  const alternatives = neighbors.filter(point => key(point) !== reverseKey)
+  if (preferred && (key(preferred) !== reverseKey || alternatives.length === 0)) return preferred
+
+  let best = neighbors[0]
+  let bestScore = -Infinity
+  for (const option of neighbors) {
+    const route = shortestPath(grid, option, target, unlocked)
+    const distance = route.length ? route.length - 1 : 999
+    const mobility = neighbors.filter(next => key(next) !== key(option)).length
+    const reversePenalty = reverseKey && key(option) === reverseKey ? 100 : 0
+    const score = -distance * 20 + mobility * 2 - reversePenalty
+    if (score > bestScore) { bestScore = score; best = option }
+  }
+  return best
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>('menu')
   const [mode, setMode] = useState<Mode>('escape')
@@ -29,6 +65,8 @@ function App() {
   const [mouse, setMouse] = useState<Point>(level.mouseStart)
   const [cat, setCat] = useState<Point>(level.catStart)
   const [previousMouse, setPreviousMouse] = useState<Point | null>(null)
+  const [previousCat, setPreviousCat] = useState<Point | null>(null)
+  const [mouseFacing, setMouseFacing] = useState<Point | null>(() => initialMouseFacing(grid, level.mouseStart, level.exit))
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set())
   const [activeGate, setActiveGate] = useState(0)
   const [riddleOpen, setRiddleOpen] = useState(false)
@@ -74,11 +112,14 @@ function App() {
   const reset = useCallback((m: Mode = mode, index: number = levelIndex) => {
     clearTurnTimer()
     const l = levels[index]
+    const nextGrid = gridForMode(l, m)
     setMode(m)
     setLevelIndex(index)
     setMouse(l.mouseStart)
     setCat(l.catStart)
     setPreviousMouse(null)
+    setPreviousCat(null)
+    setMouseFacing(initialMouseFacing(nextGrid, l.mouseStart, l.exit))
     setUnlocked(new Set())
     setActiveGate(0)
     setRiddleOpen(false)
@@ -156,32 +197,6 @@ function App() {
     markComplete()
   }, [clearTurnTimer, levelIndex, mode, profile.completed, markComplete])
 
-  const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>, lastMouse: Point | null) => {
-    const options = neighbors(grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
-    if (!options.length) return null
-    const catOptions = neighbors(grid, currentCat, currentUnlocked).filter(p => key(p) !== key(currentMouse))
-    const previousKey = lastMouse ? key(lastMouse) : null
-    let best = options[0]
-    let bestScore = -Infinity
-    for (const option of options) {
-      const distance = shortestPath(grid, currentCat, option, currentUnlocked).length
-      const exitPath = shortestPath(grid, option, level.exit, currentUnlocked)
-      const exitDistance = exitPath.length ? exitPath.length - 1 : 999
-      const mobility = neighbors(grid, option, currentUnlocked).filter(p => key(p) !== key(currentCat)).length
-      const reversePenalty = previousKey === key(option) ? 7 : 0
-      let worstCaseDistance = distance ? distance - 1 : 999
-      if (catOptions.length) {
-        worstCaseDistance = Math.min(...catOptions.map(catOption => {
-          const path = shortestPath(grid, catOption, option, currentUnlocked)
-          return path.length ? path.length - 1 : 999
-        }))
-      }
-      const score = distance * 8 + worstCaseDistance * 5 - exitDistance * 2 + mobility * 2 - reversePenalty
-      if (score > bestScore) { bestScore = score; best = option }
-    }
-    return best
-  }, [grid, level.exit])
-
   const dangerDistance = useMemo(() => {
     if (mode !== 'escape' || gameOver || victory) return null
     const path = shortestPath(grid, cat, mouse, unlocked)
@@ -212,6 +227,7 @@ function App() {
     setMoves(value => value + 1)
     setLastMover(mode)
     if (mode === 'escape') {
+      setPreviousMouse(mouse)
       setMouse(target)
       collectCoin(target)
       if (targetKey === key(cat)) { lose('You stepped directly into the cat.'); return }
@@ -219,33 +235,36 @@ function App() {
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
         playSound('opponent')
-        const path = shortestPath(grid, cat, target, unlocked)
-        if (path.length > 1) {
-          const nextCat = path[1]
+        const nextCat = chooseCatMove(grid, cat, target, unlocked, previousCat)
+        if (nextCat) {
+          setPreviousCat(cat)
           setCat(nextCat)
           if (key(nextCat) === targetKey) lose('The cat reached your tile.')
-        } else setNotice('The cat has no valid route through the current maze.')
+        } else setNotice('The cat cannot find a valid route through the current maze.')
         setThinking(false)
         turnTimer.current = null
       }, 250)
     } else {
+      setPreviousCat(cat)
       setCat(target)
       collectCoin(target)
       if (targetKey === key(mouse)) { win(); return }
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
         playSound('opponent')
-        const fleeing = mouseTurn(target, mouse, unlocked, previousMouse)
+        const fleeing = chooseMouseMove(grid, mouse, target, level.exit, unlocked, mouseFacing, previousMouse)
         if (!fleeing) { win(); return }
+        const nextFacing = directionFrom(mouse, fleeing)
         setPreviousMouse(mouse)
         setMouse(fleeing)
+        setMouseFacing(nextFacing)
         if (key(fleeing) === key(target)) win()
         else if (key(fleeing) === key(level.exit)) lose('The mouse reached the exit.')
         setThinking(false)
         turnTimer.current = null
       }, 250)
     }
-  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, grid, level, unlocked, previousMouse, lose, win, mouseTurn, collectCoin])
+  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, grid, level, unlocked, previousMouse, previousCat, mouseFacing, lose, win, collectCoin])
 
   const toggleSound = () => {
     const nextMuted = toggleMute()
@@ -364,7 +383,7 @@ function App() {
           <div className={`status-card ${danger && !thinking ? 'danger' : ''}`} role={danger && !thinking ? 'alert' : undefined} aria-live="polite" aria-atomic="true"><span className={`status-dot ${thinking ? 'thinking' : ''} ${danger && !thinking ? 'danger' : ''} ${lastMover === mode && !thinking && !danger ? 'active' : ''}`} /><span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : danger ? dangerNotice : notice}</span></div>
           <div className="stats"><span>TURN <b>{moves}</b></span><span>GATES <b>{unlocked.size}/{level.gates.length}</b></span><span>COINS <b>{profile.coins}</b></span></div>
           <div className="legend"><div><b>{selectedMouse.emoji}</b> MOUSE</div><div><b>{selectedCat.emoji}</b> CAT</div><div><b>🪙</b> COIN</div><div><b>▣</b> LOCKED GATE</div><div><b>✦</b> EXIT</div></div>
-          <p className="rule">{mode === 'escape' ? 'The cat follows the shortest valid BFS route after every successful mouse step.' : 'You control the cat. After each cat move, the mouse takes one evasive turn.'}</p>
+          <p className="rule">{mode === 'escape' ? 'The cat follows a valid shortest route and avoids pointless backtracking.' : 'The mouse travels toward the exit when it cannot see you. If you enter its line of sight, it turns away and searches for cover.'}</p>
           <div className="level-strip" aria-label="Level selection">{levels.map((l, i) => <button key={l.id} className={i === levelIndex ? 'active' : ''} disabled={i > progress[mode]} onClick={() => reset(mode, i)} aria-label={`Level ${l.id}${i > progress[mode] ? ', locked' : ''}`}>0{l.id}</button>)}</div>
         </aside>
         <section className="board-wrap">
