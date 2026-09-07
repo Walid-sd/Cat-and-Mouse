@@ -14,11 +14,11 @@ export type Character = {
 
 export const characters: Character[] = [
   { id: 'mouse-classic', role: 'mouse', name: 'Scout', emoji: '🐭', description: 'The original escape artist.', cost: 0 },
-  { id: 'mouse-snow', role: 'mouse', name: 'Snow', emoji: '🐹', description: 'A tiny explorer with a cool head.', cost: 0 },
-  { id: 'mouse-shadow', role: 'mouse', name: 'Shadow', emoji: '🐁', description: 'Quiet paws, quick decisions.', cost: 0 },
+  { id: 'mouse-snow', role: 'mouse', name: 'Snow', emoji: '🐹', description: 'A tiny explorer with a cool head.', cost: 25 },
+  { id: 'mouse-shadow', role: 'mouse', name: 'Shadow', emoji: '🐁', description: 'Quiet paws, quick decisions.', cost: 50 },
   { id: 'cat-classic', role: 'cat', name: 'Hunter', emoji: '🐱', description: 'The original maze hunter.', cost: 0 },
-  { id: 'cat-tiger', role: 'cat', name: 'Tiger', emoji: '🐯', description: 'Bold stripes and a sharper stare.', cost: 0 },
-  { id: 'cat-black', role: 'cat', name: 'Midnight', emoji: '🐈‍⬛', description: 'A silent hunter built for dark corridors.', cost: 0 },
+  { id: 'cat-tiger', role: 'cat', name: 'Tiger', emoji: '🐯', description: 'Bold stripes and a sharper stare.', cost: 40 },
+  { id: 'cat-black', role: 'cat', name: 'Midnight', emoji: '🐈‍⬛', description: 'A silent hunter built for dark corridors.', cost: 80 },
 ]
 
 export const COIN_VALUE = 1
