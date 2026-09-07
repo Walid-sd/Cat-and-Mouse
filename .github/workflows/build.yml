@@ -16,4 +16,5 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm run validate:levels
+      - run: npm run test:gameplay
       - run: npm run build
