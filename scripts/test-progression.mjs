@@ -57,9 +57,17 @@ for (const required of [
   if (!app.includes(required)) failures.push(`Persistent coin collection is missing: ${required}`)
 }
 
+if (!app.includes('const [rewardEarned, setRewardEarned] = useState(false)')) failures.push('Victory reward state is missing.')
+if (!app.includes('setRewardEarned(false)')) failures.push('Reset must clear the per-run reward state.')
+if (!app.includes('setRewardEarned(profile.completed[mode] <= levelIndex)')) failures.push('Victory must distinguish first-time completion from replay completion.')
+if (!app.includes('{rewardEarned ? <p className="reward">🪙 +10 coins · Total: {profile.coins}</p> : <p className="reward">No first-time reward · Total: {profile.coins}</p>}')) failures.push('Victory reward messaging must match whether the level bonus was actually earned.')
+const lossModal = app.match(/\{gameOver &&([\s\S]*?)\}\n      \{victory &&/)
+if (!lossModal) failures.push('Loss result modal could not be located for reward validation.')
+else if (lossModal[1].includes('className="reward"')) failures.push('Loss result modal must not display a level reward.')
+
 if (failures.length) {
   console.error(failures.join('\n'))
   process.exit(1)
 }
 
-console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, safe selection normalization, profile reset, one-time maze coin collection, level completion, bounded deterministic coin spawning, and character shop UI are defined.')
+console.log('Progression smoke test passed: starter characters, unlockable tiers, persistent profile, safe selection normalization, profile reset, one-time maze coin collection, level completion, bounded deterministic coin spawning, character shop UI, and accurate first-time victory reward messaging are defined.')
