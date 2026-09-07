@@ -21,9 +21,15 @@ Progress is stored locally in the browser for each mode. No account or server is
 
 ## Offline / installation
 
-The production build includes a web app manifest, app icon, and service worker. After the game has been opened online once, the app shell can be reused from the browser cache when the network is unavailable.
+The production build includes a web app manifest, app icon, service worker, and a progressive install prompt on browsers that expose the PWA install API. After the game has been opened online once, the app shell can be reused from the browser cache when the network is unavailable.
 
 On supported mobile and desktop browsers, the game can also be installed as a standalone web app from the browser's install/add-to-home-screen control.
+
+If the browser or platform does not expose the custom install prompt, the normal browser installation flow remains available.
+
+## Resilience
+
+The game includes production stale-chunk recovery for deployments and a React error boundary with a user-facing reload screen. A rendering failure therefore does not leave the player with an unresponsive blank page, and saved progression remains in the separate local profile store.
 
 ## Development
 
@@ -40,7 +46,7 @@ Run the complete release verification locally:
 npm run test:release
 ```
 
-This runs TypeScript checking, level validation, gameplay turn and solvability checks for both modes and every authored layout, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
+This runs TypeScript checking, level validation, gameplay turn and solvability checks for both modes and every authored layout, progression, accessibility and PWA smoke tests, deployment-configuration checks, the production build, and production-artifact verification.
 
 Individual checks are also available:
 
@@ -48,10 +54,12 @@ Individual checks are also available:
 npm run typecheck
 npm run validate:levels
 npm run test:gameplay
+npm run test:progression
 npm run test:accessibility
 npm run test:pwa
 npm run test:deployment
 npm run build
+npm run test:build-artifact
 ```
 
 The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs the same release checks before the production build.
