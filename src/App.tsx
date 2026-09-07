@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isMuted, playSound, primeAudio, toggleMute } from './audio'
 import { gridForMode, key, levels, neighbors, shortestPath, type Point } from './game'
-import { addCoins, characters, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, type PlayerProfile } from './progression'
+import { addCoins, characters, coinKey, coinSpawns, completeLevel, loadProfile, saveProfile, selectCharacter, unlockCharacter, type PlayerProfile } from './progression'
 
 type Mode = 'escape' | 'hunt'
 type Screen = 'menu' | 'game'
@@ -100,7 +100,18 @@ function App() {
   }
 
   const chooseCharacter = (role: 'mouse' | 'cat', id: string) => {
-    const next = selectCharacter(profile, role, id)
+    const character = characters.find(candidate => candidate.id === id && candidate.role === role)
+    if (!character) return
+    let next = profile
+    if (!profile.unlocked.includes(id)) {
+      next = unlockCharacter(profile, id)
+      if (next === profile) {
+        setNotice(`Not enough coins for ${character.name}. You need ${character.cost} coins.`)
+        primeAudio(); playSound('error')
+        return
+      }
+    }
+    next = selectCharacter(next, role, id)
     if (next === profile) return
     setProfile(next)
     saveProfile(next)
@@ -329,10 +340,25 @@ function App() {
           <button className="mode-card" onClick={() => start('escape')}><span className="mode-icon">{selectedMouse.emoji}</span><strong>THE ESCAPE</strong><small>Play as the mouse</small><span className="play">ENTER MAZE →</span></button>
           <button className="mode-card dark" onClick={() => start('hunt')}><span className="mode-icon">{selectedCat.emoji}</span><strong>THE HUNT</strong><small>Play as the cat</small><span className="play">START HUNT →</span></button>
         </div>
-        <section className="character-panel" aria-label="Free character selection">
+        <section className="character-panel" aria-label="Character shop and selection">
           <div className="character-header"><span>CHARACTERS</span><strong>🪙 {profile.coins}</strong></div>
-          <div className="character-group"><small>MOUSE</small><div className="character-row">{characters.filter(c => c.role === 'mouse').map(character => <button key={character.id} className={profile.selected.mouse === character.id ? 'character-card selected' : 'character-card'} onClick={() => chooseCharacter('mouse', character.id)} aria-pressed={profile.selected.mouse === character.id}><span>{character.emoji}</span><b>{character.name}</b><small>FREE</small></button>)}</div></div>
-          <div className="character-group"><small>CAT</small><div className="character-row">{characters.filter(c => c.role === 'cat').map(character => <button key={character.id} className={profile.selected.cat === character.id ? 'character-card selected' : 'character-card'} onClick={() => chooseCharacter('cat', character.id)} aria-pressed={profile.selected.cat === character.id}><span>{character.emoji}</span><b>{character.name}</b><small>FREE</small></button>)}</div></div>
+          <p className="character-note">Unlock new runners and hunters with coins earned in the maze.</p>
+          <div className="character-group"><small>MOUSE</small><div className="character-row">{characters.filter(c => c.role === 'mouse').map(character => {
+            const isUnlocked = profile.unlocked.includes(character.id)
+            const isSelected = profile.selected.mouse === character.id
+            const canAfford = profile.coins >= character.cost
+            return <button key={character.id} className={`${isSelected ? 'character-card selected' : 'character-card'} ${!isUnlocked ? 'locked' : ''}`} onClick={() => chooseCharacter('mouse', character.id)} aria-pressed={isSelected} aria-label={`${character.name}, ${isUnlocked ? isSelected ? 'selected' : 'unlocked' : `costs ${character.cost} coins`}`}>
+              <span>{character.emoji}</span><b>{character.name}</b><small>{isUnlocked ? isSelected ? 'SELECTED' : 'UNLOCKED' : `🪙 ${character.cost}${canAfford ? ' · UNLOCK' : ' · LOCKED'}`}</small>
+            </button>
+          })}</div></div>
+          <div className="character-group"><small>CAT</small><div className="character-row">{characters.filter(c => c.role === 'cat').map(character => {
+            const isUnlocked = profile.unlocked.includes(character.id)
+            const isSelected = profile.selected.cat === character.id
+            const canAfford = profile.coins >= character.cost
+            return <button key={character.id} className={`${isSelected ? 'character-card selected' : 'character-card'} ${!isUnlocked ? 'locked' : ''}`} onClick={() => chooseCharacter('cat', character.id)} aria-pressed={isSelected} aria-label={`${character.name}, ${isUnlocked ? isSelected ? 'selected' : 'unlocked' : `costs ${character.cost} coins`}`}>
+              <span>{character.emoji}</span><b>{character.name}</b><small>{isUnlocked ? isSelected ? 'SELECTED' : 'UNLOCKED' : `🪙 ${character.cost}${canAfford ? ' · UNLOCK' : ' · LOCKED'}`}</small>
+            </button>
+          })}</div></div>
         </section>
         <button className="sound-toggle" onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '◌ SOUND OFF' : '◉ SOUND ON'}</button>
         <p className="tip">Arrow keys / WASD · Touch controls · Solve riddles · Collect coins</p>
