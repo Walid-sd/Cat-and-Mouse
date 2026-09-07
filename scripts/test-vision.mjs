@@ -51,7 +51,7 @@ if (!hasLineOfSight(open, observer, { row: 5, col: 4 })) failures.push('Hunt vis
 if (hasLineOfSight(open, observer, { row: 2, col: 3 })) failures.push('Hunt vision should not treat a diagonal tile as direct line of sight.')
 
 const blocked = open.slice()
-blocked[3] = '#..#....#'
+blocked[3] = '#....#..#'
 if (hasLineOfSight(blocked, observer, { row: 3, col: 7 })) failures.push('A wall must block Hunt vision at any distance.')
 
 console.log(failures.length ? failures.map(failure => `FAIL: ${failure}`).join('\n') : 'Hunt vision regression test passed: vision is omnidirectional, long-range, and wall-blocked.')
