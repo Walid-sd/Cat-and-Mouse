@@ -44,22 +44,8 @@ export const levels: Level[] = [
   },
 ]
 
-let activeMode: Mode = 'escape'
-
-// Keep the existing game engine API (`level.grid`) while switching the actual
-// layout whenever the player changes role. The grid remains a fixed-size array;
-// only which authored layout it exposes changes.
-for (const level of levels) {
-  const escapeGrid = level.grid
-  Object.defineProperty(level, 'grid', {
-    configurable: false,
-    enumerable: true,
-    get: () => activeMode === 'hunt' ? level.huntGrid : escapeGrid,
-  })
-}
-
-export function setActiveMode(mode: Mode) {
-  activeMode = mode
+export function gridForMode(level: Level, mode: Mode): string[] {
+  return mode === 'hunt' ? level.huntGrid : level.grid
 }
 
 export function key(p: Point) { return `${p.row}:${p.col}` }
