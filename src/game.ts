@@ -87,14 +87,36 @@ export function directionFrom(from: Point, to: Point): Direction | null {
 
 export function hasLineOfSight(grid: string[], observer: Point, target: Point, facing: Direction | null, unlocked: Set<string>): boolean {
   if (!facing || same(observer, target)) return false
+
   const delta = { row: target.row - observer.row, col: target.col - observer.col }
-  if (delta.row * facing.col !== delta.col * facing.row) return false
-  if (Math.sign(delta.row) !== Math.sign(facing.row) || Math.sign(delta.col) !== Math.sign(facing.col)) return false
-  const distance = Math.abs(delta.row) + Math.abs(delta.col)
-  for (let step = 1; step < distance; step += 1) {
-    const point = { row: observer.row + facing.row * step, col: observer.col + facing.col * step }
+  const forwardDistance = delta.row * facing.row + delta.col * facing.col
+  const sidewaysDistance = Math.abs(delta.row * facing.col - delta.col * facing.row)
+
+  // Vision is an unlimited-range 90° forward cone. The old check only accepted
+  // targets on the exact facing row/column, which made valid targets disappear
+  // from the AI's vision as soon as they were a few cells away diagonally.
+  if (forwardDistance <= 0 || sidewaysDistance > forwardDistance) return false
+
+  // Trace the actual grid line so walls block vision at every distance.
+  let row = observer.row
+  let col = observer.col
+  const targetRow = target.row
+  const targetCol = target.col
+  const absRow = Math.abs(targetRow - row)
+  const absCol = Math.abs(targetCol - col)
+  const stepRow = row < targetRow ? 1 : -1
+  const stepCol = col < targetCol ? 1 : -1
+  let error = absRow - absCol
+
+  while (row !== targetRow || col !== targetCol) {
+    const doubleError = error * 2
+    if (doubleError > -absCol) { error -= absCol; row += stepRow }
+    if (doubleError < absRow) { error += absRow; col += stepCol }
+    const point = { row, col }
+    if (same(point, target)) break
     if (!canEnter(grid, point, unlocked)) return false
   }
+
   return canEnter(grid, target, unlocked)
 }
 
