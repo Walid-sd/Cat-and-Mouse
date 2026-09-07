@@ -13,7 +13,9 @@ const ids = levelBlocks.map(match => Number(match[1]))
 if (new Set(ids).size !== ids.length) errors.push('Duplicate level id detected.')
 
 const parseGrid = (block, field) => {
-  const match = block.match(new RegExp(`${field}:\\s*\[([\\s\\S]*?)\]`))
+  const match = field === 'grid'
+    ? block.match(/grid:\s*\[([\s\S]*?)\]/)
+    : block.match(/huntGrid:\s*\[([\s\S]*?)\]/)
   return match ? [...match[1].matchAll(/'([^']*)'/g)].map(item => item[1]) : null
 }
 
