@@ -29,6 +29,7 @@ export type PlayerProfile = {
   selected: Record<CharacterRole, string>
   unlocked: string[]
   completed: Record<Mode, number>
+  collectedCoins: string[]
 }
 
 const PROFILE_KEY = 'cat-and-mouse-profile-v2'
@@ -38,6 +39,7 @@ const DEFAULT_PROFILE: PlayerProfile = {
   selected: { mouse: 'mouse-classic', cat: 'cat-classic' },
   unlocked: characters.filter(character => character.cost === 0).map(character => character.id),
   completed: { escape: 0, hunt: 0 },
+  collectedCoins: [],
 }
 
 function normalizeProfile(value: unknown): PlayerProfile {
@@ -48,6 +50,9 @@ function normalizeProfile(value: unknown): PlayerProfile {
     ? source.unlocked.filter((id): id is string => typeof id === 'string' && validIds.has(id))
     : []
   for (const character of characters) if (character.cost === 0 && !unlocked.includes(character.id)) unlocked.push(character.id)
+  const collectedCoins = Array.isArray(source.collectedCoins)
+    ? [...new Set(source.collectedCoins.filter((id): id is string => typeof id === 'string' && id.length > 0))]
+    : []
 
   const selected = {
     mouse: validIds.has(source.selected?.mouse ?? '') && characters.some(c => c.id === source.selected?.mouse && c.role === 'mouse')
@@ -66,6 +71,7 @@ function normalizeProfile(value: unknown): PlayerProfile {
       escape: Math.max(0, Math.floor(Number(source.completed?.escape) || 0)),
       hunt: Math.max(0, Math.floor(Number(source.completed?.hunt) || 0)),
     },
+    collectedCoins,
   }
 }
 
@@ -93,6 +99,11 @@ export function unlockCharacter(profile: PlayerProfile, characterId: string): Pl
   const character = characters.find(candidate => candidate.id === characterId)
   if (!character || profile.unlocked.includes(characterId) || profile.coins < character.cost) return profile
   return { ...profile, coins: profile.coins - character.cost, unlocked: [...profile.unlocked, characterId] }
+}
+
+export function collectCoin(profile: PlayerProfile, coinId: string): PlayerProfile {
+  if (!coinId || profile.collectedCoins.includes(coinId)) return profile
+  return { ...addCoins(profile, COIN_VALUE), collectedCoins: [...profile.collectedCoins, coinId] }
 }
 
 export function completeLevel(profile: PlayerProfile, mode: Mode, levelIndex: number): PlayerProfile {
