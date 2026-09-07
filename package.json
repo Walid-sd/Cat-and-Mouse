@@ -8,6 +8,7 @@
     "build": "vite build",
     "validate:levels": "node scripts/validate-levels.mjs",
     "test:gameplay": "node scripts/test-gameplay.mjs",
+    "test:accessibility": "node scripts/test-accessibility.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
