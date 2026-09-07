@@ -121,6 +121,15 @@ function App() {
     return best
   }, [level])
 
+  const dangerDistance = useMemo(() => {
+    if (mode !== 'escape' || gameOver || victory) return null
+    const path = shortestPath(level.grid, cat, mouse, unlocked)
+    return path.length ? path.length - 1 : null
+  }, [mode, gameOver, victory, level, cat, mouse, unlocked])
+
+  const danger = dangerDistance !== null && dangerDistance > 0 && dangerDistance <= 3
+  const dangerNotice = dangerDistance === 1 ? 'DANGER — THE CAT IS ONE STEP AWAY.' : `DANGER — THE CAT IS ${dangerDistance} STEPS AWAY.`
+
   const performMove = useCallback((delta: Point) => {
     if (screen !== 'game' || riddleOpen || gameOver || victory || thinking) return
 
@@ -315,7 +324,10 @@ function App() {
           <p className="eyebrow">{mode === 'escape' ? 'Escape protocol' : 'Hunt protocol'}</p>
           <h2>{level.name}</h2>
           <p className="subtitle">{level.subtitle}</p>
-          <div className="status-card"><span className={`status-dot ${thinking ? 'thinking' : ''} ${lastMover === mode && !thinking ? 'active' : ''}`} /><span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : notice}</span></div>
+          <div className={`status-card ${danger && !thinking ? 'danger' : ''}`} role={danger && !thinking ? 'alert' : undefined}>
+            <span className={`status-dot ${thinking ? 'thinking' : ''} ${danger && !thinking ? 'danger' : ''} ${lastMover === mode && !thinking && !danger ? 'active' : ''}`} />
+            <span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : danger ? dangerNotice : notice}</span>
+          </div>
           <div className="stats"><span>TURN <b>{moves}</b></span><span>GATES <b>{unlocked.size}/{level.gates.length}</b></span></div>
           <div className="legend"><div><b>🐭</b> MOUSE</div><div><b>🐱</b> CAT</div><div><b>▣</b> LOCKED GATE</div><div><b>✦</b> EXIT</div></div>
           <p className="rule">{mode === 'escape' ? 'The cat follows the shortest valid BFS route after every successful mouse step.' : 'You control the cat. After each cat move, the mouse takes one evasive turn.'}</p>
@@ -336,7 +348,7 @@ function App() {
                 {isExit && !isMouse && <span aria-hidden="true">✦</span>}
                 {isGate && !openGate && <span aria-hidden="true">▣</span>}
                 {isMouse && <span className={`actor mouse ${lastMover === 'escape' && !thinking ? 'moved' : ''}`} aria-label="Mouse">🐭</span>}
-                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${lastMover === 'hunt' && !thinking ? 'moved' : ''}`} aria-label="Cat">🐱</span>}
+                {isCat && <span className={`actor cat ${thinking ? 'thinking' : ''} ${lastMover === 'hunt' && !thinking ? 'moved' : ''} ${danger && !thinking ? 'danger' : ''}`} aria-label="Cat">🐱</span>}
               </div>
             })}
           </div>
