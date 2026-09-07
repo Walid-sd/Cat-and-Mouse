@@ -4,37 +4,31 @@ const source = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8'
 const failures = []
 
 if (!source.includes('export function hasLineOfSight')) failures.push('Vision helper is missing.')
-if (!source.includes('sidewaysDistance > forwardDistance')) failures.push('Vision must use a forward cone instead of exact row/column matching.')
-if (!source.includes('Trace the actual grid line')) failures.push('Vision must trace intervening grid cells so walls block sight.')
+if (!source.includes('sameRow = delta.row === 0')) failures.push('Vision must detect targets on the same row in either direction.')
+if (!source.includes('sameColumn = delta.col === 0')) failures.push('Vision must detect targets on the same column in either direction.')
+if (!source.includes('for (let currentDistance = 1; currentDistance < distance; currentDistance += 1)')) failures.push('Vision must trace intervening grid cells so walls block sight.')
 
 function key(p) { return `${p.row}:${p.col}` }
-const directions = [{ row: -1, col: 0 }, { row: 0, col: 1 }, { row: 1, col: 0 }, { row: 0, col: -1 }]
 
 function canEnter(grid, point) {
   return grid[point.row]?.[point.col] !== undefined && grid[point.row][point.col] !== '#'
 }
 
-function hasLineOfSight(grid, observer, target, facing) {
-  if (!facing || key(observer) === key(target)) return false
+function hasLineOfSight(grid, observer, target) {
+  if (key(observer) === key(target)) return false
   const delta = { row: target.row - observer.row, col: target.col - observer.col }
-  const forwardDistance = delta.row * facing.row + delta.col * facing.col
-  const sidewaysDistance = Math.abs(delta.row * facing.col - delta.col * facing.row)
-  if (forwardDistance <= 0 || sidewaysDistance > forwardDistance) return false
+  const sameRow = delta.row === 0
+  const sameColumn = delta.col === 0
+  if (!sameRow && !sameColumn) return false
 
-  let row = observer.row
-  let col = observer.col
-  const absRow = Math.abs(target.row - row)
-  const absCol = Math.abs(target.col - col)
-  const stepRow = row < target.row ? 1 : -1
-  const stepCol = col < target.col ? 1 : -1
-  let error = absRow - absCol
-
-  while (row !== target.row || col !== target.col) {
-    const doubleError = error * 2
-    if (doubleError > -absCol) { error -= absCol; row += stepRow }
-    if (doubleError < absRow) { error += absRow; col += stepCol }
-    if (row === target.row && col === target.col) break
-    if (!canEnter(grid, { row, col })) return false
+  const distance = Math.abs(delta.row) + Math.abs(delta.col)
+  const step = { row: Math.sign(delta.row), col: Math.sign(delta.col) }
+  for (let currentDistance = 1; currentDistance < distance; currentDistance += 1) {
+    const point = {
+      row: observer.row + step.row * currentDistance,
+      col: observer.col + step.col * currentDistance,
+    }
+    if (!canEnter(grid, point)) return false
   }
   return canEnter(grid, target)
 }
@@ -48,17 +42,17 @@ const open = [
   '#.......#',
   '#########',
 ]
-const facingRight = { row: 0, col: 1 }
-const observer = { row: 3, col: 1 }
+const observer = { row: 3, col: 4 }
 
-if (!hasLineOfSight(open, observer, { row: 3, col: 2 }, facingRight)) failures.push('Hunt vision should detect a cat one cell ahead.')
-if (!hasLineOfSight(open, observer, { row: 3, col: 5 }, facingRight)) failures.push('Hunt vision should detect a cat four cells ahead with no wall.')
-if (!hasLineOfSight(open, observer, { row: 2, col: 4 }, facingRight)) failures.push('Hunt vision should detect a diagonally forward cat with no wall.')
-if (hasLineOfSight(open, observer, { row: 3, col: 5 }, { row: 0, col: -1 })) failures.push('Hunt vision should not detect a cat behind the mouse.')
+if (!hasLineOfSight(open, observer, { row: 3, col: 5 })) failures.push('Hunt vision should detect a cat one cell to the right.')
+if (!hasLineOfSight(open, observer, { row: 3, col: 1 })) failures.push('Hunt vision should detect a cat several cells to the left.')
+if (!hasLineOfSight(open, observer, { row: 1, col: 4 })) failures.push('Hunt vision should detect a cat several cells above.')
+if (!hasLineOfSight(open, observer, { row: 5, col: 4 })) failures.push('Hunt vision should detect a cat several cells below.')
+if (hasLineOfSight(open, observer, { row: 2, col: 3 })) failures.push('Hunt vision should not treat a diagonal tile as direct line of sight.')
 
 const blocked = open.slice()
 blocked[3] = '#..#....#'
-if (hasLineOfSight(blocked, observer, { row: 3, col: 5 }, facingRight)) failures.push('A wall must block Hunt vision at any distance.')
+if (hasLineOfSight(blocked, observer, { row: 3, col: 7 })) failures.push('A wall must block Hunt vision at any distance.')
 
-console.log(failures.length ? failures.map(failure => `FAIL: ${failure}`).join('\n') : 'Hunt vision regression test passed: forward vision is long-range, wall-blocked, and directional.')
+console.log(failures.length ? failures.map(failure => `FAIL: ${failure}`).join('\n') : 'Hunt vision regression test passed: vision is omnidirectional, long-range, and wall-blocked.')
 if (failures.length) process.exit(1)
