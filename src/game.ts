@@ -21,26 +21,26 @@ export const levels: Level[] = [
   {
     id: 1, name: 'The First Escape', subtitle: 'Every step gives the hunter a step.',
     grid: ['###############','#M....#.......#','#.###.#.#####.#','#...#...#.....#','###.#####.###.#','#...G...#...#.#','#.#####.#.#.#.#','#.#.....#.#...#','#.#.#########.#','#...#.........#','###.#.#########','#...#.........#','#.###.#########','#.....C......E#','###############'],
-    huntGrid: ['###############','#M....#.......#','#.###.#.#####.#','#...#...#.....#','###.#####.###.#','#...G...#...#.#','#.#####.#.#.#.#','#.#.....#.#...#','#.#.###.#####.#','#...#.........#','###.#.#########','#...#.........#','#.###.#########','#C...........E#','###############'],
     mouseStart:{row:1,col:1}, catStart:{row:13,col:6}, exit:{row:13,col:13}, gates:[{row:5,col:4}],
     riddles:[riddle('gate-1','I have keys but no locks. I have space but no room. You can enter, but you cannot go outside. What am I?',['A keyboard','A house','A map','A piano'],0,'A keyboard has keys, a space bar, and an Enter key.')],
+    huntGrid: ['###############','#M....#.......#','#.###.#.#####.#','#...#...#.....#','###.#####.###.#','#...G...#...#.#','#.#####.#.#.#.#','#.#.....#.#...#','#.#.###.#####.#','#...#.........#','###.#.#########','#...#.........#','#.###.#########','#C...........E#','###############'],
   },
   {
     id: 2, name: 'The Long Way Around', subtitle: 'One gate. One hunter. No wasted turns.',
     grid: ['###############','#M....#.......#','#.###.#.#####.#','#...#.#.......#','#.###.#####.###','#...G.....#...#','#####.###.#.#.#','#.....#...#.#.#','#.###.#.###.#.#','#...#.#.....#.#','###.#.#######.#','#...#.........#','#.###########.#','#C...........E#','###############'],
-    huntGrid: ['###############','#M....#.......#','#.###.#.#####.#','#...#.#.......#','#.###.#####.###','#...G.....#...#','#####.#.#.#.#.#','#.....#...#.#.#','#.###.#.###.#.#','#...#.#.....#.#','###.#.#######.#','#...#.........#','#.###########.#','#C...........E#','###############'],
     mouseStart:{row:1,col:1}, catStart:{row:13,col:1}, exit:{row:13,col:13}, gates:[{row:5,col:4}],
     riddles:[riddle('gate-2','What gets wetter the more it dries?',['A towel','A cloud','A sponge','Rain'],0,'A towel gets wetter as it dries you.')],
+    huntGrid: ['###############','#M....#.......#','#.###.#.#####.#','#...#.#.......#','#.###.#####.###','#...G.....#...#','#####.#.#.#.#.#','#.....#...#.#.#','#.###.#.###.#.#','#...#.#.....#.#','###.#.#######.#','#...#.........#','#.###########.#','#C...........E#','###############'],
   },
   {
     id: 3, name: 'The Final Door', subtitle: 'The shortest path is not always the safest one.',
     grid: ['###############','#M.......#....#','#.#####..#.##.#','#.....#..#....#','###.#.#######.#','#...#...G.....#','#.#####.#####.#','#.......#.....#','#######.#.###.#','#.......#.#...#','#.#######.#.#.#','#.....G...#.#.#','#.#########.#.#','#C.........#.E#','###############'],
-    huntGrid: ['###############','#M.......#....#','#.#####..#.##.#','#.....#..#....#','###.#.##.####.#','#...#...G.....#','#.#####..####.#','#.............#','#######.#.###.#','#.......#.#...#','#.#######.#.#.#','#.....G...#.#.#','#.#########.#.#','#C.........#.E#','###############'],
     mouseStart:{row:1,col:1}, catStart:{row:13,col:1}, exit:{row:13,col:13}, gates:[{row:5,col:8},{row:11,col:6}],
     riddles:[
       riddle('gate-3a','I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?',['An echo','A tree','A bell','A shadow'],0,'An echo speaks back without having a body.'),
       riddle('gate-3b','The more you take, the more you leave behind. What are they?',['Photographs','Footsteps','Coins','Secrets'],1,'Every step you take leaves another footprint behind.'),
     ],
+    huntGrid: ['###############','#M.......#....#','#.#####..#.##.#','#.....#..#....#','###.#.##.####.#','#...#...G.....#','#.#####..####.#','#.............#','#######.#.###.#','#.......#.#...#','#.#######.#.#.#','#.....G...#.#.#','#.#########.#.#','#C.........#.E#','###############'],
   },
 ]
 
@@ -129,13 +129,10 @@ export function validateLevels(source = levels): string[] {
       if (grid[level.mouseStart.row]?.[level.mouseStart.col] !== 'M') errors.push(`Level ${level.id} ${variantName}: mouseStart is not M`)
       if (grid[level.catStart.row]?.[level.catStart.col] !== 'C') errors.push(`Level ${level.id} ${variantName}: catStart is not C`)
       if (grid[level.exit.row]?.[level.exit.col] !== 'E') errors.push(`Level ${level.id} ${variantName}: exit is not E`)
-      if (same(level.mouseStart, level.catStart)) errors.push(`Level ${level.id}: mouse and cat share a start tile`)
-
       for (const gate of level.gates) {
         const gateKey = key(gate)
         if (!inBounds(grid, gate) || grid[gate.row][gate.col] !== 'G') errors.push(`Level ${level.id} ${variantName}: gate ${gateKey} is not marked G`)
       }
-
       const allUnlocked = new Set(level.gates.map(key))
       if (shortestPath(grid, level.mouseStart, level.exit, allUnlocked).length === 0) errors.push(`Level ${level.id} ${variantName}: exit is unreachable with gates open`)
     }
@@ -147,7 +144,6 @@ export function validateLevels(source = levels): string[] {
       if (seenGates.has(gateKey)) errors.push(`Level ${level.id}: duplicate gate ${gateKey}`)
       seenGates.add(gateKey)
     }
-
     const seenRiddles = new Set<string>()
     level.riddles.forEach((riddleItem, index) => {
       if (seenRiddles.has(riddleItem.id)) errors.push(`Level ${level.id}: duplicate riddle id ${riddleItem.id}`)
