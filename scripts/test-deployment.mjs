@@ -23,6 +23,9 @@ for (const required of [
   if (!headers.includes(required)) failures.push(`Security headers are missing: ${required}`)
 }
 
+if (!headers.includes('/index.html') || !headers.includes('Cache-Control: no-cache, must-revalidate')) failures.push('index.html must bypass stale browser caching during deployments')
+if (!headers.includes('/sw.js') || !headers.includes('Cache-Control: no-cache, must-revalidate')) failures.push('The service worker script must bypass stale browser caching during deployments')
+
 if (!/^User-agent: \*\nAllow: \/\n?$/.test(robots)) failures.push('robots.txt must allow public crawling')
 
 let pkg
@@ -42,4 +45,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, crawler policy, and release verification are present.')
+console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, crawler policy, and cache freshness controls are present.')
