@@ -6,7 +6,9 @@ A turn-based puzzle chase built for the browser and mobile screens.
 
 **The Escape** — play as the mouse. Navigate the maze, solve riddles to unlock gates, and reach the exit. After every successful movement, the cat advances exactly one tile along the shortest currently valid route.
 
-**The Hunt** — play as the cat. Navigate the same maze and catch the mouse before it reaches the exit. After every successful cat movement, the mouse takes one evasive turn.
+**The Hunt** — play as the cat. Navigate a purpose-built hunt layout and catch the mouse before it reaches the exit. After every successful cat movement, the mouse takes one evasive turn. Hunt layouts are authored separately from Escape layouts so each role gets a distinct challenge rather than replaying the same maze from the opposite side.
+
+The game currently contains three levels, with a dedicated Escape and Hunt layout for each level.
 
 ## Controls
 
@@ -36,7 +38,7 @@ Run the complete release verification locally:
 npm run test:release
 ```
 
-This runs TypeScript checking, level validation, gameplay solvability checks for both modes, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
+This runs TypeScript checking, level validation, gameplay solvability checks for both modes and every authored layout, accessibility and PWA smoke tests, deployment-configuration checks, and the production build.
 
 Individual checks are also available:
 
