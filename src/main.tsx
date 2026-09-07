@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles.css'
 import './progression.css'
 import App from './App'
+import ErrorBoundary from './ErrorBoundary'
 
 if (import.meta.env.PROD) {
   const preloadRecoveryKey = 'cat-and-mouse-preload-recovery'
@@ -29,6 +30,8 @@ if (import.meta.env.PROD) {
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )
