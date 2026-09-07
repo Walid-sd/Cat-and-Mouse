@@ -30,6 +30,7 @@ function App() {
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set())
   const [activeGate, setActiveGate] = useState(0)
   const [riddleOpen, setRiddleOpen] = useState(false)
+  const [riddleError, setRiddleError] = useState('')
   const [gameOver, setGameOver] = useState(false)
   const [victory, setVictory] = useState(false)
   const [thinking, setThinking] = useState(false)
@@ -52,11 +53,12 @@ function App() {
     const l = levels[index]
     setMode(m)
     setLevelIndex(index)
-    setMouse(m === 'escape' ? l.mouseStart : l.exit)
-    setCat(m === 'escape' ? l.catStart : l.mouseStart)
+    setMouse(l.mouseStart)
+    setCat(l.catStart)
     setUnlocked(new Set())
     setActiveGate(0)
     setRiddleOpen(false)
+    setRiddleError('')
     setGameOver(false)
     setVictory(false)
     setThinking(false)
@@ -101,7 +103,6 @@ function App() {
     for (const option of options) {
       const distance = shortestPath(level.grid, currentCat, option, currentUnlocked).length
       const exitDistance = shortestPath(level.grid, option, level.exit, currentUnlocked).length
-      // Survival first, escape progress second, deterministic direction order as the tie-breaker.
       const score = distance * 4 - exitDistance
       if (score > bestScore) {
         bestScore = score
@@ -123,6 +124,7 @@ function App() {
     if (cell === 'G' && !unlocked.has(targetKey)) {
       const gateIndex = level.gates.findIndex(g => key(g) === targetKey)
       setActiveGate(gateIndex < 0 ? 0 : gateIndex)
+      setRiddleError('')
       setRiddleOpen(true)
       return
     }
@@ -205,9 +207,10 @@ function App() {
       next.add(key(level.gates[activeGate]))
       setUnlocked(next)
       setRiddleOpen(false)
-      setNotice('Gate unlocked. The chase resumes on your next move.')
+      setRiddleError('')
+      setNotice(`Gate ${activeGate + 1} unlocked. Make your next move.`)
     } else {
-      setNotice('Incorrect. The gate remains locked. Think carefully.')
+      setRiddleError('Not quite. The gate stays locked — try again.')
     }
   }
 
@@ -284,15 +287,16 @@ function App() {
       </section>
 
       {(riddleOpen || gameOver || victory) && <div className="overlay">
-        {riddleOpen && <div className="modal">
+        {riddleOpen && <div className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title">
           <span className="modal-kicker">LOCKED GATE · RIDDLE {activeGate + 1}</span>
-          <h2>One question stands<br />between you and the next turn.</h2>
+          <h2 id="riddle-title">One question stands<br />between you and the next turn.</h2>
           <p className="question">{level.riddles[activeGate]?.question}</p>
           <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button key={choice} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
+          {riddleError && <p className="riddle-error" role="alert">{riddleError}</p>}
           <small>The chase is paused while you think.</small>
         </div>}
 
-        {gameOver && <div className="modal result">
+        {gameOver && <div className="modal result" role="dialog" aria-modal="true">
           <span className="result-icon">{mode === 'escape' ? '🐱' : '🐭'}</span>
           <span className="modal-kicker">{mode === 'escape' ? 'CAUGHT' : 'ESCAPED'}</span>
           <h2>{mode === 'escape' ? 'The chase is over.' : 'The mouse got away.'}</h2>
@@ -301,7 +305,7 @@ function App() {
           <button className="link" onClick={() => { clearTurnTimer(); setScreen('menu') }}>BACK TO MENU</button>
         </div>}
 
-        {victory && <div className="modal result">
+        {victory && <div className="modal result" role="dialog" aria-modal="true">
           <span className="result-icon">{mode === 'escape' ? '🐭' : '🐱'}</span>
           <span className="modal-kicker">{mode === 'escape' ? 'ESCAPED' : 'CAUGHT'}</span>
           <h2>{mode === 'escape' ? 'You made it out.' : 'Perfect hunt.'}</h2>
