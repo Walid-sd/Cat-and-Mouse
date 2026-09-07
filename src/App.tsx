@@ -43,6 +43,7 @@ function App() {
   const [muted, setMuted] = useState(() => isMuted())
   const turnTimer = useRef<number | null>(null)
   const lastFocusedElement = useRef<HTMLElement | null>(null)
+  const modalRef = useRef<HTMLDivElement | null>(null)
   const riddleFirstAnswer = useRef<HTMLButtonElement | null>(null)
   const resultFirstAction = useRef<HTMLButtonElement | null>(null)
 
@@ -246,6 +247,28 @@ function App() {
   }, [riddleOpen, activeGate])
 
   useEffect(() => {
+    if (!riddleOpen && !gameOver && !victory) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const modal = modalRef.current
+      if (!modal) return
+      const focusable = Array.from(modal.querySelectorAll<HTMLButtonElement>('button:not([disabled])'))
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [riddleOpen, gameOver, victory])
+
+  useEffect(() => {
     if (riddleOpen) return
     const element = lastFocusedElement.current
     if (element && document.contains(element)) {
@@ -364,7 +387,7 @@ function App() {
           <p className="eyebrow">{mode === 'escape' ? 'Escape protocol' : 'Hunt protocol'}</p>
           <h2>{level.name}</h2>
           <p className="subtitle">{level.subtitle}</p>
-          <div className={`status-card ${danger && !thinking ? 'danger' : ''}`} role={danger && !thinking ? 'alert' : undefined}>
+          <div className={`status-card ${danger && !thinking ? 'danger' : ''}`} role={danger && !thinking ? 'alert' : undefined} aria-live="polite" aria-atomic="true">
             <span className={`status-dot ${thinking ? 'thinking' : ''} ${danger && !thinking ? 'danger' : ''} ${lastMover === mode && !thinking && !danger ? 'active' : ''}`} />
             <span>{thinking ? 'THE OTHER PLAYER IS MOVING…' : danger ? dangerNotice : notice}</span>
           </div>
@@ -401,7 +424,7 @@ function App() {
       </section>
 
       {riddleOpen && level.riddles[activeGate] && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRiddleOpen(false) }}>
-        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title">
+        <div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="riddle-title">
           <p className="eyebrow">Gate {activeGate + 1} · Riddle</p>
           <h2 id="riddle-title">{level.riddles[activeGate].question}</h2>
           <div className="choices">
@@ -412,8 +435,8 @@ function App() {
         </div>
       </div>}
 
-      {gameOver && <div className="modal-backdrop" role="presentation"><div className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">The hunt is over</p><h2 id="result-title">CAUGHT.</h2><p>{notice}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
-      {victory && <div className="modal-backdrop" role="presentation"><div className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">Maze cleared</p><h2 id="victory-title">ESCAPED.</h2><p>{mode === 'escape' ? 'You reached the exit.' : 'You caught the mouse.'}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {gameOver && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><p className="eyebrow">The hunt is over</p><h2 id="result-title">CAUGHT.</h2><p>{notice}</p><button ref={resultFirstAction} onClick={() => reset()}>TRY AGAIN</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
+      {victory && <div className="modal-backdrop" role="presentation"><div ref={modalRef} className="modal result" role="dialog" aria-modal="true" aria-labelledby="victory-title"><p className="eyebrow">Maze cleared</p><h2 id="victory-title">ESCAPED.</h2><p>{mode === 'escape' ? 'You reached the exit.' : 'You caught the mouse.'}</p><button ref={resultFirstAction} onClick={() => { if (levelIndex < levels.length - 1 && progress[mode] >= levelIndex + 1) reset(mode, levelIndex + 1); else reset() }}>CONTINUE</button><button className="modal-close" onClick={() => setScreen('menu')}>MENU</button></div></div>}
     </main>
   )
 }
