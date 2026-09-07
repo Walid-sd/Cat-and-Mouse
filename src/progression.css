@@ -11,7 +11,7 @@
 .coin-counter { display: inline-flex; align-items: center; min-height: 42px; padding: 0 10px; border: 1px solid #3c3c3c; border-radius: 10px; font-size: 11px; font-weight: 800; }
 .coin { font-size: clamp(10px, 2.6cqw, 18px); animation: coin-float 1.1s ease-in-out infinite alternate; filter: drop-shadow(0 2px 2px #0005); }
 .reward { font-weight: 800; opacity: .9 !important; }
-.rewarded-ads-panel { width: min(760px, 100%); display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px; border: 1px solid #303030; border-radius: 16px; background: #171717; color: #f5f2ea; text-align: left; }
+.rewarded-ads-panel { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 15; width: min(760px, calc(100% - 24px)); transform: translateX(-50%); display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px; border: 1px solid #303030; border-radius: 16px; background: #171717; color: #f5f2ea; text-align: left; box-shadow: 0 16px 40px #0008; }
 .rewarded-ads-eyebrow { margin: 0 0 5px; font-size: 9px; font-weight: 900; letter-spacing: .14em; opacity: .45; }
 .rewarded-ads-panel strong { font-size: 12px; letter-spacing: .06em; }
 .rewarded-ad-status { margin: 5px 0 0; font-size: 10px; line-height: 1.45; opacity: .5; }
@@ -19,6 +19,6 @@
 .rewarded-ads-panel button:disabled { cursor: not-allowed; opacity: .4; }
 .rewarded-ads-panel button:not(:disabled):hover { transform: translateY(-1px); }
 @keyframes coin-float { from { transform: translateY(1px); } to { transform: translateY(-2px); } }
-@media (max-width: 900px) { .character-panel { width: min(680px, 100%); } .rewarded-ads-panel { width: min(680px, 100%); } }
+@media (max-width: 900px) { .character-panel { width: min(680px, 100%); } }
 @media (max-width: 560px) { .character-panel { padding: 10px; } .character-row { gap: 5px; } .character-card { min-height: 70px; padding: 7px; } .character-card > span { font-size: 21px; } .character-card b { font-size: 9px; } .coin-counter { min-height: 42px; padding: 0 8px; font-size: 10px; } .rewarded-ads-panel { grid-template-columns: 1fr; gap: 10px; padding: 12px; } .rewarded-ads-panel button { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .coin { animation: none; } }
