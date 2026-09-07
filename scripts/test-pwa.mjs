@@ -4,12 +4,13 @@ const root = new URL('../', import.meta.url)
 const read = path => readFile(new URL(path, root), 'utf8')
 const failures = []
 
-const [index, manifestSource, serviceWorker, main, icon] = await Promise.all([
+const [index, manifestSource, serviceWorker, main, icon, install] = await Promise.all([
   read('index.html'),
   read('public/manifest.webmanifest'),
   read('public/sw.js'),
   read('src/main.tsx'),
   read('public/icon.svg'),
+  read('public/install.js'),
 ])
 
 let manifest
@@ -41,10 +42,22 @@ if (!icon.includes('<svg') || !icon.includes('viewBox="0 0 512 512"')) failures.
 for (const required of [
   '<link rel="manifest" href="/manifest.webmanifest" />',
   '<link rel="icon" href="/icon.svg" type="image/svg+xml" />',
+  '<button id="install-app"',
+  '<script src="/install.js"></script>',
   'navigator.serviceWorker.register(\'/sw.js\')',
 ]) {
   const source = required.includes('register') ? main : index
   if (!source.includes(required)) failures.push(`PWA integration is missing: ${required}`)
+}
+
+for (const required of [
+  "beforeinstallprompt",
+  "prompt.prompt()",
+  "prompt.userChoice",
+  "appinstalled",
+  "display-mode: standalone",
+]) {
+  if (!install.includes(required)) failures.push(`PWA install helper is missing: ${required}`)
 }
 
 const cacheMatch = serviceWorker.match(/const CACHE_NAME = '([^']+)'/)
@@ -63,4 +76,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PWA smoke test passed: manifest identity, truthful SVG icon metadata, maskable purpose, icon integrity, service-worker registration, versioning, activation, cleanup, and navigation-only offline fallback are present.')
+console.log('PWA smoke test passed: manifest identity, truthful SVG icon metadata, install UI and prompt handling, icon integrity, service-worker registration, versioning, activation, cleanup, and navigation-only offline fallback are present.')
