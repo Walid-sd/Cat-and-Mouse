@@ -7,6 +7,14 @@ import { installAudioBridge } from './audio-bridge'
 
 installAudioBridge()
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Offline support is an enhancement; the game remains fully playable online.
+    })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
