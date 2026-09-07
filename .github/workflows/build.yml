@@ -20,4 +20,5 @@ jobs:
       - run: npm run test:gameplay
       - run: npm run test:accessibility
       - run: npm run test:pwa
+      - run: npm run test:deployment
       - run: npm run build
