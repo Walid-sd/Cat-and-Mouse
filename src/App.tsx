@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isMuted, playSound, primeAudio, toggleMute } from './audio'
 import { key, levels, neighbors, shortestPath, type Point } from './game'
 
 type Mode = 'escape' | 'hunt'
@@ -38,6 +39,7 @@ function App() {
   const [notice, setNotice] = useState('Reach the exit before the cat finds you.')
   const [moves, setMoves] = useState(0)
   const [progress, setProgress] = useState<Progress>(() => loadProgress())
+  const [muted, setMuted] = useState(() => isMuted())
   const turnTimer = useRef<number | null>(null)
   const lastFocusedElement = useRef<HTMLElement | null>(null)
   const riddleFirstAnswer = useRef<HTMLButtonElement | null>(null)
@@ -71,6 +73,8 @@ function App() {
   }, [clearTurnTimer, levelIndex, mode])
 
   const start = (m: Mode) => {
+    primeAudio()
+    playSound('start')
     reset(m, 0)
     setScreen('game')
   }
@@ -85,6 +89,7 @@ function App() {
 
   const lose = useCallback((message = 'Caught. The shortest path wins.') => {
     clearTurnTimer()
+    playSound('lose')
     setGameOver(true)
     setThinking(false)
     setNotice(message)
@@ -92,6 +97,7 @@ function App() {
 
   const win = useCallback(() => {
     clearTurnTimer()
+    playSound('win')
     setVictory(true)
     setThinking(false)
     markComplete()
@@ -125,6 +131,7 @@ function App() {
 
     const targetKey = key(target)
     if (cell === 'G' && !unlocked.has(targetKey)) {
+      primeAudio()
       lastFocusedElement.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       const gateIndex = level.gates.findIndex(g => key(g) === targetKey)
       setActiveGate(gateIndex < 0 ? 0 : gateIndex)
@@ -133,6 +140,8 @@ function App() {
       return
     }
 
+    primeAudio()
+    playSound('move')
     setMoves(value => value + 1)
     setLastMover(mode)
 
@@ -149,6 +158,7 @@ function App() {
 
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
+        playSound('opponent')
         const path = shortestPath(level.grid, cat, target, unlocked)
         if (path.length > 1) {
           const nextCat = path[1]
@@ -169,6 +179,7 @@ function App() {
 
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
+        playSound('opponent')
         const fleeing = mouseTurn(target, mouse, unlocked)
         if (!fleeing) {
           win()
@@ -185,6 +196,15 @@ function App() {
       }, 250)
     }
   }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, level, unlocked, lose, win, mouseTurn])
+
+  const toggleSound = () => {
+    const nextMuted = toggleMute()
+    setMuted(nextMuted)
+    if (!nextMuted) {
+      primeAudio()
+      playSound('start')
+    }
+  }
 
   useEffect(() => {
     if (!riddleOpen) return
@@ -213,6 +233,12 @@ function App() {
       }
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable)) return
 
+      if (event.key.toLowerCase() === 'm') {
+        event.preventDefault()
+        toggleSound()
+        return
+      }
+
       const movesByKey: Record<string, Point> = {
         ArrowUp: { row: -1, col: 0 }, w: { row: -1, col: 0 }, W: { row: -1, col: 0 },
         ArrowRight: { row: 0, col: 1 }, d: { row: 0, col: 1 }, D: { row: 0, col: 1 },
@@ -233,6 +259,8 @@ function App() {
     const riddle = level.riddles[activeGate]
     if (!riddle) return
     if (choice === riddle.answer) {
+      primeAudio()
+      playSound('gate')
       const next = new Set(unlocked)
       next.add(key(level.gates[activeGate]))
       setUnlocked(next)
@@ -240,6 +268,7 @@ function App() {
       setRiddleError('')
       setNotice(`Gate ${activeGate + 1} unlocked. ${riddle.explanation}`)
     } else {
+      playSound('error')
       setRiddleError('Not quite. The gate stays locked — try again.')
     }
   }
@@ -264,7 +293,8 @@ function App() {
             <span className="mode-icon">🐱</span><strong>THE HUNT</strong><small>Play as the cat</small><span className="play">START HUNT →</span>
           </button>
         </div>
-        <p className="tip">Arrow keys / WASD · Solve riddles · Outsmart the shortest path</p>
+        <button className="sound-toggle" onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '◌ SOUND OFF' : '◉ SOUND ON'}</button>
+        <p className="tip">Arrow keys / WASD · Solve riddles · M toggles sound</p>
       </main>
     )
   }
@@ -274,7 +304,10 @@ function App() {
       <header className="topbar">
         <button className="back" onClick={() => { clearTurnTimer(); setScreen('menu') }}>← MENU</button>
         <div className="title"><span>CAT & MOUSE</span><small>LEVEL {level.id} · {mode === 'escape' ? 'THE ESCAPE' : 'THE HUNT'}</small></div>
-        <button className="reset" onClick={() => reset()}>↻ RESET</button>
+        <div className="top-actions">
+          <button className="sound-toggle" onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? '◌' : '◉'} SOUND</button>
+          <button className="reset" onClick={() => reset()}>↻ RESET</button>
+        </div>
       </header>
 
       <section className="game-layout">
