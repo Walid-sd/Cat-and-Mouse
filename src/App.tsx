@@ -28,6 +28,7 @@ function App() {
   const level = levels[levelIndex]
   const [mouse, setMouse] = useState<Point>(level.mouseStart)
   const [cat, setCat] = useState<Point>(level.catStart)
+  const [previousMouse, setPreviousMouse] = useState<Point | null>(null)
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set())
   const [activeGate, setActiveGate] = useState(0)
   const [riddleOpen, setRiddleOpen] = useState(false)
@@ -61,6 +62,7 @@ function App() {
     setLevelIndex(index)
     setMouse(l.mouseStart)
     setCat(l.catStart)
+    setPreviousMouse(null)
     setUnlocked(new Set())
     setActiveGate(0)
     setRiddleOpen(false)
@@ -105,16 +107,36 @@ function App() {
     markComplete()
   }, [clearTurnTimer, markComplete])
 
-  const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>) => {
+  const mouseTurn = useCallback((currentCat: Point, currentMouse: Point, currentUnlocked: Set<string>, lastMouse: Point | null) => {
     const options = neighbors(level.grid, currentMouse, currentUnlocked).filter(p => key(p) !== key(currentCat))
     if (!options.length) return null
+
+    const catOptions = neighbors(level.grid, currentCat, currentUnlocked).filter(p => key(p) !== key(currentMouse))
+    const previousKey = lastMouse ? key(lastMouse) : null
 
     let best = options[0]
     let bestScore = -Infinity
     for (const option of options) {
       const distance = shortestPath(level.grid, currentCat, option, currentUnlocked).length
-      const exitDistance = shortestPath(level.grid, option, level.exit, currentUnlocked).length
-      const score = distance * 4 - exitDistance
+      const exitPath = shortestPath(level.grid, option, level.exit, currentUnlocked)
+      const exitDistance = exitPath.length ? exitPath.length - 1 : 999
+      const mobility = neighbors(level.grid, option, currentUnlocked).filter(p => key(p) !== key(currentCat)).length
+      const reversePenalty = previousKey === key(option) ? 7 : 0
+
+      // Look one turn ahead: assume the cat chooses its best immediate approach
+      // to this candidate. This makes the mouse prefer positions that remain
+      // difficult to reach, rather than simply maximizing today's distance.
+      let worstCaseDistance = distance ? distance - 1 : 999
+      if (catOptions.length) {
+        worstCaseDistance = Math.min(...catOptions.map(catOption => {
+          const path = shortestPath(level.grid, catOption, option, currentUnlocked)
+          return path.length ? path.length - 1 : 999
+        }))
+      }
+
+      // Distance from the current cat is still the primary survival signal.
+      // Exit progress and available escape branches break common corridor ties.
+      const score = distance * 8 + worstCaseDistance * 5 - exitDistance * 2 + mobility * 2 - reversePenalty
       if (score > bestScore) {
         bestScore = score
         best = option
@@ -193,11 +215,12 @@ function App() {
       setThinking(true)
       turnTimer.current = window.setTimeout(() => {
         playSound('opponent')
-        const fleeing = mouseTurn(target, mouse, unlocked)
+        const fleeing = mouseTurn(target, mouse, unlocked, previousMouse)
         if (!fleeing) {
           win()
           return
         }
+        setPreviousMouse(mouse)
         setMouse(fleeing)
         if (key(fleeing) === key(target)) {
           win()
@@ -208,7 +231,7 @@ function App() {
         turnTimer.current = null
       }, 250)
     }
-  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, level, unlocked, lose, win, mouseTurn])
+  }, [screen, riddleOpen, gameOver, victory, thinking, mode, mouse, cat, level, unlocked, previousMouse, lose, win, mouseTurn])
 
   const toggleSound = () => {
     const nextMuted = toggleMute()
