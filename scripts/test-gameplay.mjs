@@ -84,6 +84,9 @@ function validateRoute(level, route, from, to, unlocked, label) {
   return null
 }
 
+// Searches the actual Escape turn model: a player may unlock an adjacent gate
+// without spending a turn, then each successful move advances the cat one BFS step.
+// This proves every level has at least one genuinely playable winning strategy.
 function canEscape(level) {
   const start = { mouse: level.mouseStart, cat: level.catStart, unlocked: new Set() }
   const queue = [start]
@@ -125,9 +128,8 @@ function canEscape(level) {
   return false
 }
 
-// Mirrors the Hunt mouse AI in App.tsx: after each successful cat move,
-// the mouse chooses the legal neighbor maximizing distance from the cat,
-// with a secondary preference for staying closer to the exit.
+// Mirrors App.tsx's deterministic Hunt mouse AI exactly. The solver asks whether
+// at least one cat move can eventually force a catch against that fixed response.
 function mouseTurn(level, currentCat, currentMouse, unlocked) {
   const options = legalNeighbors(level, currentMouse, unlocked).filter(p => key(p) !== key(currentCat))
   if (!options.length) return null
@@ -146,9 +148,6 @@ function mouseTurn(level, currentCat, currentMouse, unlocked) {
   return best
 }
 
-// Searches the actual Hunt turn model. The cat may choose any legal move,
-// while the mouse response is deterministic according to the game's AI.
-// Reaching the mouse is an immediate win; reaching the exit is an immediate loss.
 function canHunt(level) {
   const start = { cat: level.catStart, mouse: level.mouseStart, unlocked: new Set() }
   const queue = [start]
@@ -158,7 +157,6 @@ function canHunt(level) {
     const state = queue[i]
     const unlockedKey = [...state.unlocked].sort().join(',')
 
-    // Solving a riddle is free: attempting to enter an adjacent locked gate opens it.
     for (const gate of level.gates) {
       const gateKey = key(gate)
       if (state.unlocked.has(gateKey)) continue
@@ -238,7 +236,7 @@ for (const level of levels) {
   }
 
   if (!canEscape(level)) failures.push(`Level ${level.id}: no winning Escape strategy survives the cat's BFS response`)
-  if (!canHunt(level)) failures.push(`Level ${level.id}: no winning Hunt strategy survives the mouse's evasive AI`)
+  if (!canHunt(level)) failures.push(`Level ${level.id}: no winning Hunt strategy catches the mouse before it escapes`)
 
   if (escapeRoute.length && level.gates.length) {
     const routeKeys = new Set(escapeRoute.map(key))
