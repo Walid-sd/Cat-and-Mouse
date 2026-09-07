@@ -23,5 +23,6 @@ jobs:
       - run: npm run test:accessibility
       - run: npm run test:pwa
       - run: npm run test:deployment
+      - run: npm run test:rewarded-ads
       - run: npm run build
       - run: npm run test:build-artifact
