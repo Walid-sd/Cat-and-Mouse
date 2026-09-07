@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "validate:levels": "node scripts/validate-levels.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
