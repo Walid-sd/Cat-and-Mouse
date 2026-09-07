@@ -38,6 +38,8 @@ function App() {
   const [moves, setMoves] = useState(0)
   const [progress, setProgress] = useState<Progress>(() => loadProgress())
   const turnTimer = useRef<number | null>(null)
+  const riddleFirstAnswerRef = useRef<HTMLButtonElement | null>(null)
+  const riddleTriggerRef = useRef<HTMLElement | null>(null)
 
   const clearTurnTimer = useCallback(() => {
     if (turnTimer.current !== null) {
@@ -123,6 +125,7 @@ function App() {
     const targetKey = key(target)
     if (cell === 'G' && !unlocked.has(targetKey)) {
       const gateIndex = level.gates.findIndex(g => key(g) === targetKey)
+      riddleTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       setActiveGate(gateIndex < 0 ? 0 : gateIndex)
       setRiddleError('')
       setRiddleOpen(true)
@@ -183,6 +186,8 @@ function App() {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(event.target.tagName)) return
+
       const movesByKey: Record<string, Point> = {
         ArrowUp: { row: -1, col: 0 }, w: { row: -1, col: 0 }, W: { row: -1, col: 0 },
         ArrowRight: { row: 0, col: 1 }, d: { row: 0, col: 1 }, D: { row: 0, col: 1 },
@@ -199,6 +204,34 @@ function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [performMove])
 
+  useEffect(() => {
+    if (!riddleOpen) return
+    const frame = window.requestAnimationFrame(() => riddleFirstAnswerRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [riddleOpen, activeGate])
+
+  useEffect(() => {
+    if (riddleOpen) return
+    const trigger = riddleTriggerRef.current
+    if (trigger) {
+      riddleTriggerRef.current = null
+      window.requestAnimationFrame(() => trigger.focus())
+    }
+  }, [riddleOpen])
+
+  useEffect(() => {
+    if (!riddleOpen) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setRiddleOpen(false)
+        setRiddleError('')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [riddleOpen])
+
   const answer = (choice: number) => {
     const riddle = level.riddles[activeGate]
     if (!riddle) return
@@ -208,7 +241,7 @@ function App() {
       setUnlocked(next)
       setRiddleOpen(false)
       setRiddleError('')
-      setNotice(`Gate ${activeGate + 1} unlocked. Make your next move.`)
+      setNotice(`Gate ${activeGate + 1} unlocked. ${riddle.explanation}`)
     } else {
       setRiddleError('Not quite. The gate stays locked — try again.')
     }
@@ -291,9 +324,9 @@ function App() {
           <span className="modal-kicker">LOCKED GATE · RIDDLE {activeGate + 1}</span>
           <h2 id="riddle-title">One question stands<br />between you and the next turn.</h2>
           <p className="question">{level.riddles[activeGate]?.question}</p>
-          <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button key={choice} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
+          <div className="answers">{level.riddles[activeGate]?.choices.map((choice, i) => <button ref={i === 0 ? riddleFirstAnswerRef : undefined} key={choice} onClick={() => answer(i)}>{String.fromCharCode(65 + i)} <span>{choice}</span></button>)}</div>
           {riddleError && <p className="riddle-error" role="alert">{riddleError}</p>}
-          <small>The chase is paused while you think.</small>
+          <small>The chase is paused while you think. Press Escape to close.</small>
         </div>}
 
         {gameOver && <div className="modal result" role="dialog" aria-modal="true">
