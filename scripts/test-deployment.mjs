@@ -4,11 +4,12 @@ const root = new URL('../', import.meta.url)
 const read = path => readFile(new URL(path, root), 'utf8')
 const failures = []
 
-const [netlify, headers, robots, packageSource] = await Promise.all([
+const [netlify, headers, robots, packageSource, mainSource] = await Promise.all([
   read('netlify.toml'),
   read('public/_headers'),
   read('public/robots.txt'),
   read('package.json'),
+  read('src/main.tsx'),
 ])
 
 if (!netlify.includes('command = "npm run build"')) failures.push('Netlify build command must be npm run build')
@@ -25,6 +26,8 @@ for (const required of [
 
 if (!headers.includes('/index.html') || !headers.includes('Cache-Control: no-cache, must-revalidate')) failures.push('index.html must bypass stale browser caching during deployments')
 if (!headers.includes('/sw.js') || !headers.includes('Cache-Control: no-cache, must-revalidate')) failures.push('The service worker script must bypass stale browser caching during deployments')
+if (!mainSource.includes("vite:preloadError") || !mainSource.includes("window.location.reload()")) failures.push('The app must recover from stale Vite chunks after a deployment')
+if (!mainSource.includes("cat-and-mouse-preload-recovery")) failures.push('Stale chunk recovery must prevent repeated reload loops')
 
 if (!/^User-agent: \*\nAllow: \/\n?$/.test(robots)) failures.push('robots.txt must allow public crawling')
 
@@ -45,4 +48,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, crawler policy, and cache freshness controls are present.')
+console.log('Deployment smoke test passed: Netlify build/publish settings, security headers, crawler policy, cache freshness controls, and stale-chunk recovery are present.')
