@@ -23,7 +23,16 @@ if (manifest) {
     if (!manifest[field]) failures.push(`PWA manifest is missing ${field}`)
   }
   if (manifest.display !== 'standalone') failures.push('PWA manifest must use standalone display mode')
-  if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) failures.push('PWA manifest must define at least one icon')
+  if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) {
+    failures.push('PWA manifest must define at least one icon')
+  } else {
+    for (const size of ['192x192', '512x512']) {
+      if (!manifest.icons.some(icon => icon?.sizes === size)) failures.push(`PWA manifest must define a ${size} icon`)
+    }
+    if (!manifest.icons.some(icon => icon?.sizes === '512x512' && icon?.purpose?.includes('maskable'))) {
+      failures.push('PWA manifest must provide a maskable 512x512 icon')
+    }
+  }
 }
 
 for (const required of [
@@ -51,4 +60,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PWA smoke test passed: manifest, installation metadata, service-worker registration, versioning, activation, cleanup, and navigation-only offline fallback are present.')
+console.log('PWA smoke test passed: manifest, install icon sizes, maskable icon metadata, service-worker registration, versioning, activation, cleanup, and navigation-only offline fallback are present.')
