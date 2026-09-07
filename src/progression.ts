@@ -71,11 +71,7 @@ function normalizeProfile(value: unknown): PlayerProfile {
 
 export function loadProfile(storage: Pick<Storage, 'getItem'> | undefined = typeof localStorage === 'undefined' ? undefined : localStorage): PlayerProfile {
   if (!storage) return structuredClone(DEFAULT_PROFILE)
-  try {
-    return normalizeProfile(JSON.parse(storage.getItem(PROFILE_KEY) ?? 'null'))
-  } catch {
-    return structuredClone(DEFAULT_PROFILE)
-  }
+  try { return normalizeProfile(JSON.parse(storage.getItem(PROFILE_KEY) ?? 'null')) } catch { return structuredClone(DEFAULT_PROFILE) }
 }
 
 export function saveProfile(profile: PlayerProfile, storage: Pick<Storage, 'setItem'> | undefined = typeof localStorage === 'undefined' ? undefined : localStorage): void {
@@ -96,15 +92,13 @@ export function selectCharacter(profile: PlayerProfile, role: CharacterRole, cha
 export function unlockCharacter(profile: PlayerProfile, characterId: string): PlayerProfile {
   const character = characters.find(candidate => candidate.id === characterId)
   if (!character || profile.unlocked.includes(characterId) || profile.coins < character.cost) return profile
-  return {
-    ...profile,
-    coins: profile.coins - character.cost,
-    unlocked: [...profile.unlocked, characterId],
-  }
+  return { ...profile, coins: profile.coins - character.cost, unlocked: [...profile.unlocked, characterId] }
 }
 
 export function completeLevel(profile: PlayerProfile, mode: Mode, levelIndex: number): PlayerProfile {
-  const completed = Math.max(profile.completed[mode], levelIndex + 1)
+  const previousCompleted = profile.completed[mode]
+  const completed = Math.max(previousCompleted, levelIndex + 1)
+  if (completed === previousCompleted) return { ...profile, completed: { ...profile.completed, [mode]: completed } }
   return addCoins({ ...profile, completed: { ...profile.completed, [mode]: completed } }, LEVEL_COMPLETION_BONUS)
 }
 
@@ -116,9 +110,9 @@ export function coinSpawns(grid: string[], seed: number, reserved: Point[]): Poi
       if (grid[row][col] === '.' && !reservedKeys.has(`${row}:${col}`)) candidates.push({ row, col })
     }
   }
-
+  if (!candidates.length) return []
   const chosen: Point[] = []
-  let cursor = Math.abs(seed * 17 + 11) % Math.max(1, candidates.length)
+  let cursor = Math.abs(seed * 17 + 11) % candidates.length
   const targetCount = Math.min(8, Math.max(4, Math.floor(candidates.length / 18)))
   while (chosen.length < targetCount && chosen.length < candidates.length) {
     const point = candidates[cursor]
