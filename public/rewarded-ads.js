@@ -88,6 +88,11 @@
     panel.hidden = !menu
   }
 
+  const primeAudioIfAvailable = () => {
+    // The ad placement API handles its own playback; this hook intentionally avoids
+    // coupling the static monetization layer to the React audio module.
+  }
+
   button.addEventListener('click', () => {
     if (!adReady || rewarding || !window.adBreak) return
     primeAudioIfAvailable()
@@ -112,18 +117,15 @@
         }
       },
       adBreakDone: info => {
-        if (!earned && info?.breakStatus && info.breakStatus !== 'viewed') {
-          setStatus('No rewarded ad was available right now. You were not charged and no coins were added.')
-          setButton(false, `WATCH AD · +${rewardCoins} 🪙`)
-        }
+        if (earned) return
+        const statusText = info?.breakStatus && info.breakStatus !== 'viewed'
+          ? 'No rewarded ad was available right now. You were not charged and no coins were added.'
+          : 'Rewarded ad finished without a verified completion. No coins were added.'
+        setStatus(statusText)
+        setButton(false, `WATCH AD · +${rewardCoins} 🪙`)
       },
     })
   })
-
-  const primeAudioIfAvailable = () => {
-    // The ad placement API handles its own playback; this hook intentionally avoids
-    // coupling the static monetization layer to the React audio module.
-  }
 
   loadAdsense()
   updateVisibility()
