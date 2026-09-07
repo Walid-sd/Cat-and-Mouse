@@ -16,11 +16,6 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - run: npm install
-      - run: npm install --package-lock-only
-      - uses: actions/upload-artifact@v4
-        with:
-          name: generated-package-lock
-          path: package-lock.json
       - run: npm run typecheck
       - run: npm run validate:levels
       - run: npm run test:gameplay
