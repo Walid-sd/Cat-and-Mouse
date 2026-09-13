@@ -1,72 +1,117 @@
 # Cat & Mouse
 
-A turn-based puzzle chase built for the browser and mobile screens.
+A turn-based puzzle chase designed for browser and mobile play.
 
-## Game concept
+Cat & Mouse explores two complementary game experiences built around the same core idea: every successful move changes the state of the chase.
 
-**The Escape** — play as the mouse. Navigate the maze, solve riddles to unlock gates, and reach the exit. After every successful movement, the cat advances exactly one tile along the shortest currently valid route.
+## Game modes
 
-**The Hunt** — play as the cat. Navigate a purpose-built hunt layout and catch the mouse before it reaches the exit. After every successful cat movement, the mouse takes one evasive turn. Hunt layouts are authored separately from Escape layouts so each role gets a distinct challenge rather than replaying the same maze from the opposite side.
+### The Escape
+Play as the mouse. Navigate a maze, solve riddles to unlock gates, and reach the exit while the cat advances one tile after each successful movement.
 
-The game currently contains three levels, with a dedicated Escape and Hunt layout for each level.
+### The Hunt
+Play as the cat. Navigate a dedicated hunt layout and catch the mouse before the mouse reaches the exit. Hunt layouts are authored separately from Escape layouts so the two roles provide distinct challenges.
 
-## Controls
+The current release contains three levels, with a dedicated Escape and Hunt layout for each level.
 
-- **Keyboard:** Arrow keys or WASD
-- **Touch:** On-screen directional controls
-- **Sound:** `M` toggles sound, or use the in-game sound button
-- **Riddles:** Choose an answer to unlock a gate; incorrect answers leave the gate locked
+## Interaction design
 
-Progress is stored locally in the browser for each mode. No account or server is required.
+- Keyboard controls: Arrow keys or WASD
+- Touch controls: on-screen directional controls for mobile play
+- Sound: in-game toggle or `M` key
+- Riddle gates: answer correctly to unlock; incorrect answers keep the gate locked
+- Local progression: player progress is stored locally without an account or server
+
+## Mobile & PWA
+
+The project is designed for desktop and mobile browser screens and can be installed as a Progressive Web App on supported browsers.
+
+The production build includes:
+
+- Web app manifest and app icon
+- Service worker and cached app shell
+- Browser installation prompt where supported
+- Offline reuse of the app shell after the first online visit
+
+## Production resilience
+
+The game includes safeguards intended to keep the player experience recoverable in production:
+
+- React error boundary with a user-facing recovery screen
+- Stale-deployment/chunk recovery
+- Separate local progression storage
+- Release checks for gameplay, progression, accessibility, PWA behavior, deployment configuration, rewarded-ad integration, and production artifacts
 
 ## Optional rewarded ads
 
-The menu includes an optional **Watch an Ad · +15 🪙** reward. The reward is granted only from the H5 Games Ads `adViewed` completion callback; dismissing or unavailable ads award nothing. The ad panel is hidden during gameplay so ads never interrupt active turns.
+The menu contains an optional rewarded-ad placement that can grant 15 in-game coins after a confirmed ad-completion callback. Ads are never shown during active gameplay.
 
-The integration is deliberately disabled until an approved H5 Games Ads Publisher ID is supplied in `public/ads-config.js`. Keep `testMode: true` while testing the placement. Once the H5 Games Ads account/site is approved, set the real Publisher ID and switch test mode off. Google requires H5 Games Ads access to be approved and recommends the standard Ad Placement API for rewarded placements.
+The integration is disabled by default until an approved publisher ID is configured. Test mode remains enabled for development.
 
-## Offline / installation
+## Tech stack
 
-The production build includes a web app manifest, app icon, service worker, and a progressive install prompt on browsers that expose the PWA install API. After the game has been opened online once, the app shell can be reused from the browser cache when the network is unavailable.
-
-On supported mobile and desktop browsers, the game can also be installed as a standalone web app from the browser's install/add-to-home-screen control.
-
-If the browser or platform does not expose the custom install prompt, the normal browser installation flow remains available.
-
-## Resilience
-
-The game includes production stale-chunk recovery for deployments and a React error boundary with a user-facing reload screen. A rendering failure therefore does not leave the player with an unresponsive blank page, and saved progression remains in the separate local profile store.
+- React
+- TypeScript
+- Vite
+- CSS
+- Progressive Web App APIs
+- Netlify deployment configuration
+- GitHub Actions for release verification
 
 ## Development
 
-**Node.js 24 or newer is required.**
+Requirements: **Node.js 24+**
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Run the complete release verification locally:
+Run the full release verification suite:
 
 ```bash
 npm run test:release
 ```
 
-This runs TypeScript checking, level validation, gameplay turn and solvability checks for both modes and every authored layout, progression, accessibility and PWA smoke tests, deployment-configuration checks, rewarded-ad integration checks, the production build, and production-artifact verification.
+The release suite performs type checking, level validation, gameplay and progression checks, accessibility checks, PWA checks, deployment checks, rewarded-ad checks, a production build, and production-artifact verification.
 
-Individual checks are also available:
+Build for production:
 
 ```bash
-npm run typecheck
-npm run validate:levels
-npm run test:gameplay
-npm run test:progression
-npm run test:accessibility
-npm run test:pwa
-npm run test:deployment
-npm run test:rewarded-ads
 npm run build
-npm run test:build-artifact
 ```
 
-The Vite output is `dist/`, making the project suitable for Netlify with `npm run build` as the build command and `dist` as the publish directory. GitHub Actions runs the same release checks before the production build.
+The production output is generated in `dist/` and is configured for Netlify deployment.
+
+## Project structure
+
+```text
+src/
+├── App.tsx              # Main application and UI flow
+├── game.ts              # Core game logic
+├── progression.ts       # Local progression/profile state
+├── styles.css           # Main responsive UI styling
+├── progression.css      # Progression-related UI styling
+├── audio.ts             # Game audio behavior
+└── ErrorBoundary.tsx    # Runtime error recovery
+
+public/
+├── manifest.webmanifest # PWA metadata
+├── sw.js                # Service worker
+├── install.js           # Installation UX
+└── rewarded-ads.js      # Optional rewarded-ad integration
+
+scripts/
+└── *.mjs                # Release and validation checks
+```
+
+## Status
+
+An actively developed browser game prototype focused on interaction design, responsive play, game-flow design, and production-oriented web implementation.
